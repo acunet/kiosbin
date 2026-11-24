@@ -2,16 +2,18 @@
 
 use askama::Template;
 use axum::extract::{Path, Query, State};
-use axum::response::Response;
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 use axum::Form;
 use serde::Deserialize;
 use tower_sessions::Session;
 
+use crate::cart;
 use crate::sale::{self, SaleInput};
 use crate::settings::Settings;
 use crate::web::{
-    bad_request, cart_view, group_tabs, load_cart, redirect, render, save_cart, set_flash,
-    take_flash, tiles, whoami, AppState, CartPartial, TillQuery,
+    bad_request, cart_view, group_tabs, redirect, render, session_id, set_flash, take_flash, tiles,
+    whoami, AppState, CartPartial, TillQuery,
 };
 
 #[derive(Debug, Clone)]
@@ -26,7 +28,12 @@ struct GroupTab {
 struct TillTemplate {
     outlet_name: String,
     cashier: String,
+    initial: String,
     opened_at: String,
+    invoice_prefix: String,
+    next_number_hint: String,
+    printer_ready: bool,
+    printer_label: String,
     groups: Vec<GroupTab>,
     query: String,
     items: Vec<crate::web::ItemTile>,
@@ -73,9 +80,8 @@ pub async fn till(
         Ok(s) => s,
         Err(e) => return bad_request(e.to_string()),
     };
-    let cart = load_cart(&session).await;
 
-    match render_till(&state, &session, &settings, &query, &cart).await {
+    match render_till(&state, &session, &settings, &query).await {
         Ok(response) => response,
         Err(e) => bad_request(e.to_string()),
     }
@@ -86,7 +92,6 @@ async fn render_till(
     session: &Session,
     settings: &Settings,
     query: &TillQuery,
-    cart: &crate::cart::Cart,
 ) -> Result<Response, crate::settings::BoxError> {
     let Some(user) = whoami(session).await else {
         return Ok(redirect("/login"));
@@ -96,9 +101,10 @@ async fn render_till(
     };
 
     let items = grid_items(state, query).await?;
-    let cart_view = cart_view(&state.pool, settings, cart).await?;
-    let (today_count, today_total) =
-        sale::today_totals(&state.pool, &settings.invoice_prefix()).await?;
+    let availability = crate::catalog::makeable_now(&state.pool).await?;
+    let cart_view = cart_view(&state.pool, settings, &session_id(session)).await?;
+    let prefix = settings.invoice_prefix();
+    let (today_count, today_total) = sale::today_totals(&state.pool, &prefix).await?;
     let low_stock = crate::stock::items_at_or_below_zero(&state.pool)
         .await?
         .len() as i64;
@@ -117,17 +123,31 @@ async fn render_till(
         });
     }
 
+    let printer_host = settings.get("printer_host");
+    let printer_ready = !printer_host.is_empty();
+    let printer_label = if printer_ready {
+        format!("{}:{}", printer_host, settings.get("printer_port"))
+    } else {
+        String::new()
+    };
+
     Ok(render(TillTemplate {
         outlet_name: settings.outlet_name(),
+        initial: user
+            .cashier
+            .chars()
+            .next()
+            .map(|c| c.to_uppercase().to_string())
+            .unwrap_or_default(),
         cashier: user.cashier,
-        opened_at: shift
-            .opened_at
-            .get(..16)
-            .unwrap_or(&shift.opened_at)
-            .to_string(),
+        opened_at: shift.opened_at.clone(),
+        invoice_prefix: prefix,
+        next_number_hint: sale::next_number_hint(&state.pool, &settings.invoice_prefix()).await?,
+        printer_ready,
+        printer_label,
         groups,
         query: query.q.clone().unwrap_or_default(),
-        items: tiles(items, settings),
+        items: tiles(items, settings, &availability),
         cart: cart_view,
         today_count,
         today_total_display: settings.money(today_total),
@@ -148,9 +168,12 @@ pub async fn items_partial(
         Ok(s) => s,
         Err(e) => return bad_request(e.to_string()),
     };
+    let availability = crate::catalog::makeable_now(&state.pool)
+        .await
+        .unwrap_or_default();
     match grid_items(&state, &query).await {
         Ok(items) => render(ItemsPartial {
-            items: tiles(items, &settings),
+            items: tiles(items, &settings, &availability),
         }),
         Err(e) => bad_request(e.to_string()),
     }
@@ -161,8 +184,7 @@ pub async fn cart_partial(State(state): State<AppState>, session: Session) -> Re
         Ok(s) => s,
         Err(e) => return bad_request(e.to_string()),
     };
-    let cart = load_cart(&session).await;
-    match cart_view(&state.pool, &settings, &cart).await {
+    match cart_view(&state.pool, &settings, &session_id(&session)).await {
         Ok(view) => render(CartPartial { cart: view }),
         Err(e) => bad_request(e.to_string()),
     }
@@ -187,10 +209,11 @@ pub async fn cart_add(
     if whoami(&session).await.is_none() {
         return redirect("/login");
     }
-    let mut cart = load_cart(&session).await;
-    cart.add(form.item_id, 1);
-    save_cart(&session, &cart).await;
-    cart_partial(State(state), session).await
+    // One atomic statement per tap: rapid sales never lose a line.
+    if let Err(e) = cart::add(&state.pool, &session_id(&session), form.item_id, 1).await {
+        return bad_request(e.to_string());
+    }
+    StatusCode::NO_CONTENT.into_response()
 }
 
 pub async fn cart_qty(
@@ -198,10 +221,11 @@ pub async fn cart_qty(
     session: Session,
     Form(form): Form<QtyForm>,
 ) -> Response {
-    let mut cart = load_cart(&session).await;
-    cart.set_qty(form.item_id, form.qty);
-    save_cart(&session, &cart).await;
-    cart_partial(State(state), session).await
+    if let Err(e) = cart::set_qty(&state.pool, &session_id(&session), form.item_id, form.qty).await
+    {
+        return bad_request(e.to_string());
+    }
+    StatusCode::NO_CONTENT.into_response()
 }
 
 pub async fn cart_remove(
@@ -209,16 +233,17 @@ pub async fn cart_remove(
     session: Session,
     Form(form): Form<ItemForm>,
 ) -> Response {
-    let mut cart = load_cart(&session).await;
-    cart.remove(form.item_id);
-    save_cart(&session, &cart).await;
-    cart_partial(State(state), session).await
+    if let Err(e) = cart::remove(&state.pool, &session_id(&session), form.item_id).await {
+        return bad_request(e.to_string());
+    }
+    StatusCode::NO_CONTENT.into_response()
 }
 
 pub async fn cart_clear(State(state): State<AppState>, session: Session) -> Response {
-    let cart = crate::cart::Cart::default();
-    save_cart(&session, &cart).await;
-    cart_partial(State(state), session).await
+    if let Err(e) = cart::clear(&state.pool, &session_id(&session)).await {
+        return bad_request(e.to_string());
+    }
+    StatusCode::NO_CONTENT.into_response()
 }
 
 // ---------------------------------------------------------------------------
@@ -236,14 +261,6 @@ struct MethodOption {
 struct QuickAmount {
     label: String,
     value: i64,
-}
-
-#[derive(Debug, Clone)]
-struct LineDisplay {
-    name: String,
-    qty: i64,
-    unit: String,
-    amount: String,
 }
 
 #[derive(Template)]
@@ -282,8 +299,7 @@ async fn pay_context(
 ) -> Result<(Settings, crate::web::Whoami, crate::web::CartView), crate::settings::BoxError> {
     let settings = state.settings().await?;
     let user = whoami(session).await.ok_or("not logged in")?;
-    let cart = load_cart(session).await;
-    let view = cart_view(&state.pool, &settings, &cart).await?;
+    let view = cart_view(&state.pool, &settings, &session_id(session)).await?;
     Ok((settings, user, view))
 }
 
@@ -349,22 +365,29 @@ pub async fn pay(
         return redirect("/shift/open");
     };
 
-    let cart = load_cart(&session).await;
     let discount = crate::money::parse(&form.discount).unwrap_or(0);
     let received = crate::money::parse(&form.received);
 
+    let sid = session_id(&session);
+    let lines = match cart::lines(&state.pool, &sid).await {
+        Ok(lines) => lines,
+        Err(e) => {
+            set_flash(&session, e.to_string()).await;
+            return redirect("/pay");
+        }
+    };
     let input = SaleInput {
         cashier: user.cashier.clone(),
         shift_id: shift.id,
         method: form.method.clone(),
         received,
         discount,
-        lines: cart.lines.iter().map(|l| (l.item_id, l.qty)).collect(),
+        lines: lines.iter().map(|l| (l.item_id, l.qty)).collect(),
     };
 
     match sale::create(&state.pool, &settings, input).await {
         Ok(result) => {
-            save_cart(&session, &crate::cart::Cart::default()).await;
+            let _ = cart::clear(&state.pool, &sid).await;
             redirect(&format!("/receipt/{}", result.id))
         }
         Err(e) => {
@@ -372,6 +395,14 @@ pub async fn pay(
             redirect("/pay")
         }
     }
+}
+
+#[derive(Debug, Clone)]
+struct LineDisplay {
+    name: String,
+    qty: i64,
+    unit: String,
+    amount: String,
 }
 
 #[derive(Template)]

@@ -16,7 +16,6 @@ use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use tower_sessions::{MemoryStore, Session, SessionManagerLayer};
 
-use crate::cart::Cart;
 use crate::settings::{BoxError, Result, Settings};
 
 pub type BoxErr = BoxError;
@@ -81,7 +80,6 @@ async fn htmx_js() -> impl IntoResponse {
 
 pub const KEY_CASHIER: &str = "cashier";
 pub const KEY_ROLE: &str = "role";
-pub const KEY_CART: &str = "cart";
 pub const KEY_FLASH: &str = "flash";
 pub const KEY_FAILS: &str = "login_fails";
 
@@ -113,17 +111,12 @@ pub async fn set_flash(session: &Session, message: impl Into<String>) {
     let _ = session.insert(KEY_FLASH, message.into()).await;
 }
 
-pub async fn load_cart(session: &Session) -> Cart {
-    session
-        .get::<Cart>(KEY_CART)
-        .await
-        .ok()
-        .flatten()
-        .unwrap_or_default()
-}
-
-pub async fn save_cart(session: &Session, cart: &Cart) {
-    let _ = session.insert(KEY_CART, cart.clone()).await;
+/// The session is only an identity now: the cart lives in the database (see `cart.rs`).
+///
+/// `id()` is `None` until the session has a record; every cart route is behind a login, which
+/// creates one, so this cannot silently share a cart between tills.
+pub fn session_id(session: &Session) -> String {
+    session.id().map(|id| id.to_string()).unwrap_or_default()
 }
 
 /// Renders an Askama template, turning a template error into a visible 500 instead of a panic.
@@ -201,7 +194,6 @@ async fn login(
         Ok(Some(user)) => {
             let _ = session.insert(KEY_CASHIER, user.name.clone()).await;
             let _ = session.insert(KEY_ROLE, user.role.clone()).await;
-            let _ = session.insert(KEY_CART, Cart::default()).await;
             let _ = session.remove::<i64>(KEY_FAILS).await;
             redirect("/")
         }
@@ -216,7 +208,9 @@ async fn login(
     }
 }
 
-async fn logout(session: Session) -> Response {
+async fn logout(State(state): State<AppState>, session: Session) -> Response {
+    // An abandoned cart should not come back at the next login.
+    let _ = crate::cart::clear(&state.pool, &session_id(&session)).await;
     let _ = session.flush().await;
     redirect("/login")
 }
@@ -233,6 +227,16 @@ pub struct ItemTile {
     pub group_name: String,
     pub price_display: String,
     pub no_price: bool,
+    /// Initials drawn on the card tile — there are no product photos in the catalog.
+    pub monogram: String,
+    /// Stable hue per item group, so a category is recognisable at a glance.
+    pub hue: u32,
+    pub has_availability: bool,
+    pub availability: i64,
+    /// Nothing left to make: the card is dimmed and the badge reads "Habis".
+    pub sold_out: bool,
+    /// `""`, `"low"` (≤3 left) or `"none"` (nothing left to make).
+    pub stock_class: String,
 }
 
 #[derive(Debug, Clone)]
@@ -242,6 +246,9 @@ pub struct CartLineView {
     pub qty: i64,
     pub unit_price_display: String,
     pub amount_display: String,
+    /// There is nothing left to make of this item — the till still sells it (the owner's
+    /// negative-stock policy is open), but the cashier is told before taking the money.
+    pub out_of_stock: bool,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -253,20 +260,29 @@ pub struct CartView {
     pub empty: bool,
 }
 
-/// Turns the session cart into something a template can print, re-reading names and prices
-/// from the database so the displayed price is always the current one.
-pub async fn cart_view(pool: &SqlitePool, settings: &Settings, cart: &Cart) -> Result<CartView> {
-    let mut lines = Vec::with_capacity(cart.lines.len());
+/// Turns the cart rows into something a template can print, re-reading names and prices from the
+/// catalog so the displayed price is always the current one.
+pub async fn cart_view(
+    pool: &SqlitePool,
+    settings: &Settings,
+    session_id: &str,
+) -> Result<CartView> {
+    let rows = crate::cart::lines(pool, session_id).await?;
+    let availability = crate::catalog::makeable_now(pool).await?;
+    let mut lines = Vec::with_capacity(rows.len());
     let mut subtotal = 0i64;
-    for line in &cart.lines {
-        let item = crate::catalog::by_id(pool, line.item_id).await?;
+    let mut total_qty = 0i64;
+    for row in &rows {
+        let item = crate::catalog::by_id(pool, row.item_id).await?;
         let Some(item) = item else { continue };
-        let amount = item.price * line.qty;
+        let amount = item.price * row.qty;
         subtotal += amount;
+        total_qty += row.qty;
         lines.push(CartLineView {
+            out_of_stock: matches!(availability.get(&item.id), Some(0)),
             item_id: item.id,
             name: item.name,
-            qty: line.qty,
+            qty: row.qty,
             unit_price_display: settings.money(item.price),
             amount_display: settings.money(amount),
         });
@@ -276,7 +292,7 @@ pub async fn cart_view(pool: &SqlitePool, settings: &Settings, cart: &Cart) -> R
         lines,
         subtotal,
         subtotal_display: settings.money(subtotal),
-        total_qty: cart.total_qty(),
+        total_qty,
     })
 }
 
@@ -303,18 +319,50 @@ pub async fn group_tabs(pool: &SqlitePool) -> Result<Vec<String>> {
     Ok(rows.into_iter().map(|(g,)| g).collect())
 }
 
-pub fn tiles(items: Vec<crate::catalog::Item>, settings: &Settings) -> Vec<ItemTile> {
+pub fn tiles(
+    items: Vec<crate::catalog::Item>,
+    settings: &Settings,
+    availability: &HashMap<i64, i64>,
+) -> Vec<ItemTile> {
     items
         .into_iter()
-        .map(|item| ItemTile {
-            id: item.id,
-            code: item.code,
-            name: item.name,
-            group_name: item.group_name,
-            price_display: settings.money(item.price),
-            no_price: item.price <= 0,
+        .map(|item| {
+            let makeable = availability.get(&item.id).copied();
+            ItemTile {
+                monogram: monogram(&item.name),
+                hue: hue_for(&item.group_name),
+                has_availability: makeable.is_some(),
+                availability: makeable.unwrap_or(0),
+                sold_out: makeable == Some(0),
+                stock_class: match makeable {
+                    Some(0) => "none".to_string(),
+                    Some(left) if left <= 3 => "low".to_string(),
+                    _ => String::new(),
+                },
+                id: item.id,
+                code: item.code,
+                name: item.name,
+                group_name: item.group_name,
+                price_display: settings.money(item.price),
+                no_price: item.price <= 0,
+            }
         })
         .collect()
+}
+
+fn monogram(name: &str) -> String {
+    let letters: String = name
+        .split_whitespace()
+        .take(2)
+        .filter_map(|word| word.chars().next())
+        .collect();
+    letters.to_uppercase()
+}
+
+/// Same group, same colour — no lookup table to keep in sync.
+fn hue_for(group: &str) -> u32 {
+    let sum: u32 = group.bytes().map(u32::from).sum();
+    (sum * 47) % 360
 }
 
 pub type QueryMap = HashMap<String, String>;

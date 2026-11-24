@@ -1,5 +1,7 @@
 //! Item catalog queries used by the till.
 
+use std::collections::HashMap;
+
 use sqlx::SqlitePool;
 
 use crate::settings::Result;
@@ -60,4 +62,24 @@ pub async fn recipe_of(pool: &SqlitePool, item_id: i64) -> Result<Vec<(i64, f64,
             .fetch_all(pool)
             .await?;
     Ok(rows)
+}
+
+/// How many more of each sellable item the shelf can actually make right now.
+///
+/// The scarcest ingredient decides. Items with no recipe (add-ons, services) get no answer
+/// rather than a made-up one.
+pub async fn makeable_now(pool: &SqlitePool) -> Result<HashMap<i64, i64>> {
+    let rows: Vec<(i64, f64)> = sqlx::query_as(
+        "SELECT r.item_id, MIN(COALESCE(b.balance, 0) / r.qty) AS makeable
+         FROM recipes r
+         LEFT JOIN (SELECT item_id, SUM(qty) AS balance FROM stock_moves GROUP BY item_id) b
+                ON b.item_id = r.ingredient_id
+         GROUP BY r.item_id",
+    )
+    .fetch_all(pool)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|(item_id, makeable)| (item_id, makeable.floor().max(0.0) as i64))
+        .collect())
 }

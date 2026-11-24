@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use kiosbin::{cart::Cart, db, import, sale, shift, stock, users};
+use kiosbin::{db, import, sale, shift, stock, users};
 
 struct Fixture {
     _dir: PathBuf,
@@ -350,11 +350,95 @@ async fn voiding_puts_the_ingredients_back_and_keeps_the_receipt() {
 }
 
 #[tokio::test]
-async fn a_cart_keeps_item_ids_only() {
-    let mut cart = Cart::default();
-    cart.add(1, 2);
-    assert_eq!(cart.total_qty(), 2);
-    assert_eq!(cart.lines[0].item_id, 1);
+async fn the_cart_lives_in_the_database_and_bumps_atomically() {
+    let f = fixture("cart").await;
+    let item = item_id(&f.pool, "MN-AD-TELUR").await;
+
+    kiosbin::cart::add(&f.pool, "sess-1", item, 1)
+        .await
+        .unwrap();
+    kiosbin::cart::add(&f.pool, "sess-1", item, 2)
+        .await
+        .unwrap();
+    let lines = kiosbin::cart::lines(&f.pool, "sess-1").await.unwrap();
+    assert_eq!(lines.len(), 1, "same item stays one line");
+    assert_eq!(lines[0].qty, 3);
+    assert_eq!(
+        kiosbin::cart::total_qty(&f.pool, "sess-1").await.unwrap(),
+        3
+    );
+
+    kiosbin::cart::set_qty(&f.pool, "sess-1", item, 1)
+        .await
+        .unwrap();
+    assert_eq!(
+        kiosbin::cart::total_qty(&f.pool, "sess-1").await.unwrap(),
+        1
+    );
+
+    // Zero means the minus button reached the bottom: the line goes away.
+    kiosbin::cart::set_qty(&f.pool, "sess-1", item, 0)
+        .await
+        .unwrap();
+    assert!(kiosbin::cart::lines(&f.pool, "sess-1")
+        .await
+        .unwrap()
+        .is_empty());
+
+    // Carts are per session: another till is untouched.
+    assert!(kiosbin::cart::lines(&f.pool, "sess-2")
+        .await
+        .unwrap()
+        .is_empty());
+}
+
+#[tokio::test]
+async fn the_scarcest_ingredient_decides_how_many_cups_are_left() {
+    let f = fixture("makeable").await;
+    let kopi = item_id(&f.pool, "MN-KOPI-03").await;
+    // Recipe per cup: 30 ml milk, 15 ml palm sugar, 1 cup, 15 g coffee.
+    for (code, qty) in [
+        ("BB-SUSU", 300.0),      // 10 cups
+        ("BB-GULA-AREN", 150.0), // 10 cups
+        ("BB-CUP-16OZ", 10.0),   // 10 cups
+        ("BB-KOPI", 150.0),      // 10 cups
+    ] {
+        let id = item_id(&f.pool, code).await;
+        stock::record(&f.pool, id, qty, "opening", "opname-awal")
+            .await
+            .unwrap();
+    }
+
+    let makeable = kiosbin::catalog::makeable_now(&f.pool).await.unwrap();
+    assert_eq!(makeable.get(&kopi), Some(&10));
+
+    // Running out of one ingredient caps the answer, whatever the others say.
+    let cups = item_id(&f.pool, "BB-CUP-16OZ").await;
+    stock::record(&f.pool, cups, -6.0, "sale", "W3D-test")
+        .await
+        .unwrap();
+    let makeable = kiosbin::catalog::makeable_now(&f.pool).await.unwrap();
+    assert_eq!(
+        makeable.get(&kopi),
+        Some(&4),
+        "only 4 cups left on the shelf"
+    );
+
+    // An ingredient that is empty means nothing can be made — never a negative badge.
+    stock::record(&f.pool, cups, -10.0, "sale", "W3D-test")
+        .await
+        .unwrap();
+    let makeable = kiosbin::catalog::makeable_now(&f.pool).await.unwrap();
+    assert_eq!(makeable.get(&kopi), Some(&0));
+
+    // Add-ons *with* a recipe get an honest number; the two without a recipe get none.
+    let bakso = item_id(&f.pool, "MN-AD-BAKSO").await;
+    assert_eq!(makeable.get(&bakso), None, "no recipe, no invented number");
+    let keju = item_id(&f.pool, "MN-AD-KEJU").await;
+    assert!(
+        makeable.contains_key(&keju),
+        "keju has a recipe, so it has a number"
+    );
 }
 
 #[tokio::test]

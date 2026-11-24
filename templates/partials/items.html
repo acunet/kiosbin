@@ -1,13 +1,18 @@
 <div class="grid" id="grid">
   {% for item in items %}
-  <button class="btn tile{% if item.no_price %} noprice{% endif %}"
-          hx-post="/cart/add" hx-vals='{"item_id": {{ item.id }}}' hx-target="#cart" hx-swap="outerHTML">
-    <span class="code">{{ item.code }}</span>
-    <span>{{ item.name }}</span>
-    <span class="price">{% if item.no_price %}harga belum diisi{% else %}{{ item.price_display }}{% endif %}</span>
+  <button class="item-card{% if item.sold_out %} out{% endif %}" style="--h: {{ item.hue }}"
+          hx-post="/cart/add" hx-vals='{"item_id": {{ item.id }}}' hx-swap="none"
+          title="{{ item.code }}">
+    <span class="item-name">{{ item.name }}</span>
+    <span class="item-foot">
+      <span class="item-price{% if item.no_price %} unset{% endif %}">{% if item.no_price %}harga belum diisi{% else %}{{ item.price_display }}{% endif %}</span>
+      {% if item.has_availability %}
+      <span class="badge-stock {{ item.stock_class }}">{% if item.sold_out %}Habis{% else %}{{ item.availability }}{% endif %}</span>
+      {% endif %}
+    </span>
   </button>
   {% endfor %}
   {% if items.is_empty() %}
-  <p class="hint">Tidak ada item yang cocok.</p>
+  <div class="empty-grid">Tidak ada item yang cocok dengan pencarian itu.</div>
   {% endif %}
 </div>

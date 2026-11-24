@@ -1,24 +1,61 @@
 {% extends "base.html" %}
 {% block title %}{{ outlet_name }} — Masuk{% endblock %}
 {% block body %}
-<div class="center">
-  <div class="panel">
-    <h2>{{ outlet_name }}</h2>
-    {% if !flash.is_empty() %}<div class="flash" style="margin:0 0 12px">{{ flash }}</div>{% endif %}
-    <form method="post" action="/login">
-      <label for="cashier">Kasir</label>
-      <select id="cashier" name="cashier">
-        {% for c in cashiers %}
-        <option value="{{ c.name }}">{{ c.name }}{% if c.role == "owner" %} (owner){% endif %}</option>
-        {% endfor %}
-      </select>
-      <label for="pin">PIN</label>
-      <input id="pin" name="pin" type="password" inputmode="numeric" autocomplete="off"
-             pattern="[0-9]*" minlength="4" maxlength="6" autofocus>
-      <div style="margin-top:16px"><button class="btn primary wide" type="submit">Masuk</button></div>
+<div class="centred" style="padding-top:56px">
+  <div class="card">
+    <div class="card-head" style="text-align:center">
+      <div style="width:48px;height:48px;margin:0 auto 10px;border-radius:14px;background:linear-gradient(140deg,var(--brand),#4aa3ff);color:#fff;font-weight:800;font-size:22px;display:grid;place-items:center">K</div>
+      <div class="brand" style="font-size:19px">{{ outlet_name }}</div>
+      <div class="hint">Masukkan PIN kasir untuk mulai</div>
+    </div>
+
+    <form method="post" action="/login" id="loginform">
+      <div class="card-body">
+        {% if !flash.is_empty() %}<div class="alert" style="margin:0 0 12px">⚠ {{ flash }}</div>{% endif %}
+
+        <label class="field" for="cashier">Kasir</label>
+        <select class="text" id="cashier" name="cashier">
+          {% for c in cashiers %}
+          <option value="{{ c.name }}">{{ c.name }}{% if c.role == "owner" %} · owner{% endif %}</option>
+          {% endfor %}
+        </select>
+
+        <label class="field" for="pin">PIN</label>
+        <input class="text pin-display" id="pin" name="pin" type="password" inputmode="numeric"
+               autocomplete="off" maxlength="6" placeholder="••••">
+
+        <div class="keypad">
+          <button type="button" onclick="tap('1')">1</button>
+          <button type="button" onclick="tap('2')">2</button>
+          <button type="button" onclick="tap('3')">3</button>
+          <button type="button" onclick="tap('4')">4</button>
+          <button type="button" onclick="tap('5')">5</button>
+          <button type="button" onclick="tap('6')">6</button>
+          <button type="button" onclick="tap('7')">7</button>
+          <button type="button" onclick="tap('8')">8</button>
+          <button type="button" onclick="tap('9')">9</button>
+          <button type="button" class="grey" onclick="tap('del')">⌫</button>
+          <button type="button" onclick="tap('0')">0</button>
+          <button type="submit" class="ok">Masuk</button>
+        </div>
+      </div>
     </form>
-    <p class="hint" style="margin-top:12px">Belum ada kasir? Buat dari server:
-      <code>kiosbin user add Rina --pin 1234</code></p>
+
+    <div class="card-foot hint">
+      Tablet lebih enak dipakai begini: buka browser, pilih mode kiosk/fullscreen, dan setel
+      “jangan tidur” selama jam buka.
+    </div>
   </div>
 </div>
+<script>
+  const pin = document.getElementById("pin");
+  function tap(key) {
+    if (key === "del") { pin.value = pin.value.slice(0, -1); }
+    else if (pin.value.length < 6) { pin.value += key; }
+    pin.focus();
+  }
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && pin.value.length >= 4) document.getElementById("loginform").submit();
+  });
+</script>
 {% endblock %}

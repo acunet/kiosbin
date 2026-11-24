@@ -273,6 +273,32 @@ pub async fn today_totals(pool: &SqlitePool, prefix: &str) -> Result<(i64, i64)>
     Ok((count, sum.unwrap_or(0)))
 }
 
+/// The number the next sale *will* get — shown to the cashier, never reserved here.
+pub async fn next_number_hint(pool: &SqlitePool, prefix: &str) -> Result<String> {
+    let now: String = sqlx::query_scalar(crate::db::NOW_SQL)
+        .fetch_one(pool)
+        .await?;
+    let day = now[..10].replace('-', "");
+    let like = format!("{prefix}-{day}-%");
+    let last: Option<(String,)> =
+        sqlx::query_as("SELECT number FROM sales WHERE number LIKE ? ORDER BY number DESC LIMIT 1")
+            .bind(&like)
+            .fetch_optional(pool)
+            .await?;
+    let next = match last {
+        Some((number,)) => {
+            number
+                .rsplit('-')
+                .next()
+                .and_then(|n| n.parse::<u32>().ok())
+                .unwrap_or(0)
+                + 1
+        }
+        None => 1,
+    };
+    Ok(format!("{prefix}-{day}-{next:03}"))
+}
+
 /// Voiding is a reversal: status changes, stock comes back, the number is never reused.
 pub async fn void(pool: &SqlitePool, sale_id: i64, reason: &str) -> Result<()> {
     let mut tx = pool.begin().await?;

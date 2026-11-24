@@ -59,7 +59,7 @@ async fn migrates_from_empty_and_is_repeatable() {
     .fetch_one(&pool)
     .await
     .unwrap();
-    assert_eq!(tables.0, 13, "schema tables created");
+    assert_eq!(tables.0, 14, "schema tables created");
 
     // Running it again on an up-to-date database must not fail or duplicate anything.
     db::migrate(&pool, &migrations_dir())

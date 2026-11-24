@@ -43,6 +43,7 @@ struct ShiftCloseTemplate {
 struct ShiftClosedTemplate {
     outlet_name: String,
     cashier: String,
+    closed_at: String,
     lines: Vec<CountView>,
 }
 
@@ -163,6 +164,10 @@ pub async fn close(
         Ok(lines) => render(ShiftClosedTemplate {
             outlet_name: settings.outlet_name(),
             cashier: user.cashier,
+            closed_at: sqlx::query_scalar::<_, String>(crate::db::NOW_SQL)
+                .fetch_one(&state.pool)
+                .await
+                .unwrap_or_default(),
             lines: lines
                 .into_iter()
                 .map(|line| CountView {

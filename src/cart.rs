@@ -1,74 +1,83 @@
-//! The till cart. Held in the session as (item, qty) only — prices are re-read from the
-//! database when the sale is written, so a stale cart can never change what is charged.
+//! The till cart, held in the database.
+//!
+//! Every change is a single atomic statement, so two fast taps can never lose an item, and an
+//! unfinished order survives the server restarting mid-shift. Only item ids and quantities are
+//! stored: names and prices are read from the catalog when the cart is rendered or charged.
 
-use serde::{Deserialize, Serialize};
+use sqlx::SqlitePool;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+use crate::settings::Result;
+
+#[derive(Debug, Clone, PartialEq, sqlx::FromRow)]
 pub struct CartLine {
     pub item_id: i64,
     pub qty: i64,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct Cart {
-    pub lines: Vec<CartLine>,
+pub async fn lines(pool: &SqlitePool, session_id: &str) -> Result<Vec<CartLine>> {
+    let rows = sqlx::query_as::<_, CartLine>(
+        "SELECT item_id, qty FROM cart_lines WHERE session_id = ? ORDER BY item_id",
+    )
+    .bind(session_id)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows)
 }
 
-impl Cart {
-    pub fn is_empty(&self) -> bool {
-        self.lines.is_empty()
+/// Bumps the quantity in one statement — this is what makes rapid tapping safe.
+pub async fn add(pool: &SqlitePool, session_id: &str, item_id: i64, qty: i64) -> Result<()> {
+    if qty <= 0 {
+        return Ok(());
     }
-
-    /// Adds one unit, or bumps the quantity when the item is already in the cart.
-    pub fn add(&mut self, item_id: i64, qty: i64) {
-        if let Some(line) = self.lines.iter_mut().find(|l| l.item_id == item_id) {
-            line.qty += qty;
-        } else {
-            self.lines.push(CartLine { item_id, qty });
-        }
-    }
-
-    /// Sets an absolute quantity. Zero removes the line — that is the minus button.
-    pub fn set_qty(&mut self, item_id: i64, qty: i64) {
-        if let Some(line) = self.lines.iter_mut().find(|l| l.item_id == item_id) {
-            line.qty = qty;
-        }
-        self.lines.retain(|l| l.qty > 0);
-    }
-
-    pub fn remove(&mut self, item_id: i64) {
-        self.lines.retain(|l| l.item_id != item_id);
-    }
-
-    pub fn clear(&mut self) {
-        self.lines.clear();
-    }
-
-    pub fn total_qty(&self) -> i64 {
-        self.lines.iter().map(|l| l.qty).sum()
-    }
+    sqlx::query(
+        "INSERT INTO cart_lines (session_id, item_id, qty) VALUES (?, ?, ?)
+         ON CONFLICT (session_id, item_id) DO UPDATE SET qty = qty + excluded.qty",
+    )
+    .bind(session_id)
+    .bind(item_id)
+    .bind(qty)
+    .execute(pool)
+    .await?;
+    Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn adding_the_same_item_twice_bumps_the_quantity() {
-        let mut cart = Cart::default();
-        cart.add(7, 1);
-        cart.add(7, 1);
-        assert_eq!(cart.lines.len(), 1);
-        assert_eq!(cart.lines[0].qty, 2);
+/// Sets an absolute quantity; zero or less removes the line (that is the minus button).
+pub async fn set_qty(pool: &SqlitePool, session_id: &str, item_id: i64, qty: i64) -> Result<()> {
+    if qty <= 0 {
+        return remove(pool, session_id, item_id).await;
     }
+    sqlx::query("UPDATE cart_lines SET qty = ? WHERE session_id = ? AND item_id = ?")
+        .bind(qty)
+        .bind(session_id)
+        .bind(item_id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
 
-    #[test]
-    fn dropping_to_zero_removes_the_line() {
-        let mut cart = Cart::default();
-        cart.add(7, 2);
-        cart.set_qty(7, 1);
-        assert_eq!(cart.total_qty(), 1);
-        cart.set_qty(7, 0);
-        assert!(cart.is_empty());
-    }
+pub async fn remove(pool: &SqlitePool, session_id: &str, item_id: i64) -> Result<()> {
+    sqlx::query("DELETE FROM cart_lines WHERE session_id = ? AND item_id = ?")
+        .bind(session_id)
+        .bind(item_id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+pub async fn clear(pool: &SqlitePool, session_id: &str) -> Result<()> {
+    sqlx::query("DELETE FROM cart_lines WHERE session_id = ?")
+        .bind(session_id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// Total quantity in the cart, for the header.
+pub async fn total_qty(pool: &SqlitePool, session_id: &str) -> Result<i64> {
+    let (total,): (Option<i64>,) =
+        sqlx::query_as("SELECT SUM(qty) FROM cart_lines WHERE session_id = ?")
+            .bind(session_id)
+            .fetch_one(pool)
+            .await?;
+    Ok(total.unwrap_or(0))
 }

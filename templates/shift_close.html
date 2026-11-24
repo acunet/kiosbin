@@ -1,29 +1,82 @@
 {% extends "base.html" %}
 {% block title %}{{ outlet_name }} — Tutup Shift{% endblock %}
 {% block body %}
-<div class="center">
-  <div class="panel">
-    <h2>Tutup Shift</h2>
-    <p class="hint">Kasir <strong>{{ cashier }}</strong> · dibuka {{ opened_at }}</p>
-    {% if !flash.is_empty() %}<div class="flash" style="margin:0 0 12px">{{ flash }}</div>{% endif %}
-    <form method="post" action="/shift/close">
-      <table>
-        <tr><th>Metode</th><th class="num">Seharusnya</th><th class="num">Hitung fisik</th></tr>
-        {% for line in lines %}
-        <tr>
-          <td>{{ line.method }}{% if line.is_cash %} <span class="hint">(laci)</span>{% endif %}</td>
-          <td class="num">{{ line.expected_display }}</td>
-          <td class="num">
-            <input name="counted_{{ line.method }}" type="text" inputmode="numeric" placeholder="wajib diisi">
-          </td>
-        </tr>
-        {% endfor %}
-      </table>
-      <p class="hint">Ketik uang yang benar-benar ada. Jangan biarkan kosong dan jangan mengisi 0
-        kalau laci tidak kosong — selisih inilah yang dipakai untuk kontrol kas.</p>
-      <div style="margin-top:16px"><button class="btn primary wide" type="submit">Tutup shift sekarang</button></div>
+<div class="centred" style="padding-top:32px">
+  <div class="card wide-card">
+    <div class="card-head">
+      <div class="panel-title" style="font-size:17px">Tutup shift</div>
+      <div class="hint">Kasir <b>{{ cashier }}</b> · shift dibuka {{ opened_at }}</div>
+    </div>
+
+    <form method="post" action="/shift/close" id="closeform">
+      <div class="card-body">
+        {% if !flash.is_empty() %}<div class="alert" style="margin:0 0 12px">⚠ {{ flash }}</div>{% endif %}
+
+        <table>
+          <tr>
+            <th>Metode</th>
+            <th class="num">Seharusnya</th>
+            <th class="num">Hitung fisik</th>
+            <th class="num">Selisih</th>
+          </tr>
+          {% for line in lines %}
+          <tr>
+            <td>
+              {{ line.method }}
+              {% if line.is_cash %}<div class="q hint">uang di laci</div>{% endif %}
+            </td>
+            <td class="num tnum">{{ line.expected_display }}</td>
+            <td class="num">
+              <input class="text tnum" name="counted_{{ line.method }}" type="text" inputmode="numeric"
+                     placeholder="wajib diisi" style="text-align:right;max-width:150px;margin-left:auto">
+            </td>
+            <td class="num hint">setelah disimpan</td>
+          </tr>
+          {% endfor %}
+        </table>
+
+        <div class="keypad" style="grid-template-columns:repeat(3,1fr);max-width:320px;margin-left:auto">
+          <button type="button" onclick="tap('1')">1</button>
+          <button type="button" onclick="tap('2')">2</button>
+          <button type="button" onclick="tap('3')">3</button>
+          <button type="button" onclick="tap('4')">4</button>
+          <button type="button" onclick="tap('5')">5</button>
+          <button type="button" onclick="tap('6')">6</button>
+          <button type="button" onclick="tap('7')">7</button>
+          <button type="button" onclick="tap('8')">8</button>
+          <button type="button" onclick="tap('9')">9</button>
+          <button type="button" class="grey" onclick="tap('000')">000</button>
+          <button type="button" onclick="tap('0')">0</button>
+          <button type="button" class="grey" onclick="tap('del')">⌫</button>
+        </div>
+
+        <p class="hint" style="margin-top:12px">
+          Ketik uang yang <b>benar-benar ada</b>. Kotak kosong akan ditolak — itu disengaja:
+          selisih kas inilah yang dipakai untuk kontrol. Jangan mengisi 0 kalau laci tidak kosong.
+        </p>
+      </div>
+
+      <div class="card-foot">
+        <div class="row">
+          <a class="btn" href="/">Kembali ke kasir</a>
+          <button class="btn btn-primary" type="submit">Tutup shift sekarang</button>
+        </div>
+      </div>
     </form>
-    <div style="margin-top:8px"><a class="btn wide" href="/">Kembali ke kasir</a></div>
   </div>
 </div>
+<script>
+  // The keypad types into whichever count box the cashier last touched.
+  let target = null;
+  document.querySelectorAll("input[name^='counted_']").forEach((el) => {
+    el.addEventListener("focus", () => { target = el; });
+  });
+  function tap(key) {
+    if (!target) { target = document.querySelector("input[name^='counted_']"); }
+    if (!target) return;
+    if (key === "del") target.value = target.value.slice(0, -1);
+    else target.value += key;
+    target.focus();
+  }
+</script>
 {% endblock %}

@@ -1,38 +1,101 @@
 {% extends "base.html" %}
 {% block title %}{{ outlet_name }} — Kasir{% endblock %}
 {% block body %}
-<header class="top">
-  <div>
-    <div class="brand">{{ outlet_name }}</div>
-    <div class="meta">Kasir {{ cashier }} · shift dibuka {{ opened_at }}{% if low_stock > 0 %} · <span class="bad">stok minus {{ low_stock }}</span>{% endif %}</div>
-  </div>
-  <div class="spacer"></div>
-  <div class="meta">Hari ini: {{ today_count }} nota · {{ today_total_display }}</div>
-  <a class="btn" href="/shift/close">Tutup Shift</a>
-  <form method="post" action="/logout"><button class="btn danger" type="submit">Keluar</button></form>
-</header>
+<div class="app">
+  <nav class="rail">
+    <div class="mark">K</div>
+    <a class="active" href="/" title="Kasir">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+    </a>
+    <a href="/pay" title="Bayar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h2.2l2.3 11.2A2 2 0 0 0 8.5 16h9.9a2 2 0 0 0 2-1.6L22 7H5"/></svg>
+    </a>
+    <a href="/shift/close" title="Tutup shift">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+    </a>
+    <div class="spacer"></div>
+    <div class="bottom">
+      <form method="post" action="/logout">
+        <button class="rail-btn" type="submit" title="Keluar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg>
+        </button>
+      </form>
+    </div>
+  </nav>
 
-{% if !flash.is_empty() %}<div class="flash">{{ flash }}</div>{% endif %}
-
-<div class="layout">
-  <section>
-    <div class="panel">
-      <input type="search" name="q" value="{{ query }}" placeholder="Cari nama atau kode item…"
-             hx-get="/items" hx-target="#grid" hx-swap="outerHTML"
-             hx-include="[name='group']" hx-trigger="keyup changed delay:150ms, search">
-      <div class="tabs" id="tabs">
-        {% for group in groups %}
-        <a class="tab{% if group.active %} active{% endif %}" href="/?group={{ group.key }}">{{ group.label }}</a>
-        {% endfor %}
+  <main>
+    <header class="topbar">
+      <div>
+        <div class="brand">{{ outlet_name }}</div>
+        <div class="hint">Nota berikutnya <b class="tnum">{{ next_number_hint }}</b></div>
       </div>
-    </div>
-    <div style="margin-top:12px">
-      {% include "partials/items.html" %}
-    </div>
-  </section>
+      <span class="pill brandpill">{{ invoice_prefix }}</span>
+      <div class="spacer"></div>
+      <div class="status">
+        <span class="stat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          <b class="tnum" data-clock>--:--:--</b>
+        </span>
+        <span class="sep"></span>
+        <span class="stat" data-shift-opened="{{ opened_at }}">Shift aktif</span>
+        <span class="sep"></span>
+        <span class="stat{% if !printer_ready %} warn{% endif %}"
+              title="{% if printer_ready %}Struk dicetak ke {{ printer_label }}{% else %}Belum ada printer dikonfigurasi{% endif %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="7" rx="2"/><path d="M7 16h10v5H7z"/></svg>
+          {% if printer_ready %}Printer siap{% else %}Printer belum diset{% endif %}
+        </span>
+        <span class="sep"></span>
+        <span class="stat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>
+          Hari ini <b>{{ today_count }}</b> nota · <b class="tnum">{{ today_total_display }}</b>
+        </span>
+      </div>
+      <a class="btn" href="/shift/close">Tutup shift</a>
+      <div class="who">
+        <span class="avatar">{{ initial }}</span>
+        <span class="hint">Kasir <b>{{ cashier }}</b></span>
+      </div>
+    </header>
 
-  <aside>
-    {% include "partials/cart.html" %}
-  </aside>
+    {% if !flash.is_empty() %}<div class="alert">⚠ {{ flash }}</div>{% endif %}
+    {% if low_stock > 0 %}<div class="alert info">Bahan berikut sudah nol atau minus: <b>{{ low_stock }}</b> item.
+      Koreksi lewat opname sebelum jualan ramai.</div>{% endif %}
+
+    <div class="workspace">
+      <section>
+        <div class="filters">
+          {% for group in groups %}
+          <a class="chip{% if group.active %} active{% endif %}" href="/?group={{ group.key }}">{{ group.label }}</a>
+          {% endfor %}
+        </div>
+        <div class="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <input type="search" name="q" value="{{ query }}" autofocus
+                 placeholder="Cari kode atau nama item…"
+                 hx-get="/items" hx-target="#grid" hx-swap="outerHTML"
+                 hx-trigger="keyup changed delay:150ms, search">
+        </div>
+        <div class="kbd-row" style="margin:8px 2px 6px">
+          <span><span class="kbd">Enter</span> tambah hasil pertama</span>
+          <span><span class="kbd">F2</span> bayar</span>
+          <span><span class="kbd">Esc</span> batal</span>
+        </div>
+        {% include "partials/items.html" %}
+      </section>
+
+      <aside>{% include "partials/cart.html" %}</aside>
+    </div>
+  </main>
 </div>
+
+<script>
+  // Keyboard-first: cashiers keep their hands on the numpad until the money is in the drawer.
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "F2") { e.preventDefault(); window.location = "/pay"; }
+    if (e.key === "Enter" && document.activeElement && document.activeElement.name === "q") {
+      const first = document.querySelector("#grid .item-card");
+      if (first) { e.preventDefault(); first.click(); }
+    }
+  });
+</script>
 {% endblock %}

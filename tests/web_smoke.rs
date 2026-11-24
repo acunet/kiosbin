@@ -135,6 +135,45 @@ async fn health_is_open_and_everything_else_needs_a_login() {
 }
 
 #[tokio::test]
+async fn fast_taps_do_not_lose_items() {
+    let app = app("race").await;
+    let (_, _, cookie) = get(&app, "/login", None).await;
+    let (_, _, cookie) = post(&app, "/login", "cashier=Rina&pin=1234", cookie.as_deref()).await;
+    let cookie = cookie.as_deref().unwrap().to_string();
+    let (status, _, _) = post(&app, "/shift/open", "opening_float=0", Some(&cookie)).await;
+    assert!(status.is_redirection());
+
+    let kopi = item_id(&app, "MN-KOPI-03").await;
+    let body = format!("item_id={kopi}");
+
+    // Five taps in flight at the same moment: the cart is a read-modify-write on the session,
+    // so without serialisation some of these would be silently dropped.
+    let mut tasks = Vec::new();
+    for _ in 0..5 {
+        let router = app.router.clone();
+        let cookie = cookie.clone();
+        let body = body.clone();
+        tasks.push(tokio::spawn(async move {
+            let mut request = form(&body);
+            *request.uri_mut() = "/cart/add".parse().unwrap();
+            request
+                .headers_mut()
+                .insert(header::COOKIE, cookie.parse().unwrap());
+            router.oneshot(request).await.unwrap().status()
+        }));
+    }
+    for task in tasks {
+        assert_eq!(task.await.unwrap(), StatusCode::NO_CONTENT);
+    }
+
+    let (_, cart, _) = get(&app, "/cart", Some(&cookie)).await;
+    assert!(
+        cart.contains("Keranjang · 5 item"),
+        "every tap must land in the cart: {cart}"
+    );
+}
+
+#[tokio::test]
 async fn a_wrong_pin_does_not_get_in_and_a_right_one_does() {
     let app = app("login").await;
     let (_, _, cookie) = get(&app, "/login", None).await;
@@ -181,13 +220,16 @@ async fn a_full_till_run_from_login_to_receipt() {
     assert_eq!(status, StatusCode::OK);
     assert!(body.contains("MN-KOPI-03"), "{body:.300}");
 
-    // 4. put it in the cart twice through the HTMX endpoint
+    // 4. put it in the cart twice; writes answer 204 and the cart is read back afterwards
     let kopi = item_id(&app, "MN-KOPI-03").await;
     let (status, body, _) = post(&app, "/cart/add", &format!("item_id={kopi}"), cookie).await;
-    assert_eq!(status, StatusCode::OK, "cart add: {body}");
+    assert_eq!(status, StatusCode::NO_CONTENT, "cart add: {body}");
     let (status, body, _) = post(&app, "/cart/add", &format!("item_id={kopi}"), cookie).await;
-    assert_eq!(status, StatusCode::OK, "cart add again: {body}");
-    assert!(body.contains("Keranjang"), "the cart partial comes back");
+    assert_eq!(status, StatusCode::NO_CONTENT, "cart add again: {body}");
+
+    let (status, body, _) = get(&app, "/cart", cookie).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(body.contains("Keranjang · 2 item"), "cart partial: {body}");
     assert!(body.contains("Rp 36.000"), "2 x 18.000 in the cart: {body}");
 
     // 5. pay cash and land on the receipt
