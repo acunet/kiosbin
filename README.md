@@ -14,6 +14,22 @@ second build, no API version skew, no CORS, no stale JS bundle and nothing to in
 till besides opening a browser. Deploying = copying one file and starting one systemd unit.
 If a native/mobile client is ever needed, the HTTP boundary is already the seam to split on.
 
+## Try it (no install)
+
+```bash
+export PATH="$HOME/.cargo/bin:$PATH"
+
+cargo run -- migrate                                    # create kiosbin.db
+cargo run -- import fixtures/warkop3dara.seed.json       # reference tenant catalog
+printf '1234\n' | cargo run -- user add Rina             # a cashier with pin 1234
+cargo run -- serve --bind 127.0.0.1:8080                 # the till, same binary
+```
+
+Open <http://localhost:8080> (or `http://<pc-ip>:8080` from a tablet on the same WiFi):
+log in with the PIN, enter the opening float, tap items, pay cash with change, read the
+receipt (including the ESC/POS preview of what a thermal printer would receive), then close
+the shift by typing the physical cash count. `ops/smoke.sh` drives that whole path over HTTP.
+
 ## What it does
 
 - **Till**: item grid + search by code/name, cart, quantity, paid add-ons as their own lines,
@@ -24,8 +40,8 @@ If a native/mobile client is ever needed, the HTTP boundary is already the seam 
 - **Stock ledger**: recipes deduct ingredients on submit, `SUM(stock_moves.qty)` is the
   balance (never stored), opening stock, stock-takes, waste, purchases (cost → margin).
 - **Vouchers**: service items (WiFi/access vouchers) can issue a code per unit and print it
-  on the receipt.
-- **Owner reports** that open on a phone, plus CSV.
+  on the receipt (schema ready, provider integration is a later step).
+- **Owner reports** that open on a phone, plus CSV (next step).
 
 ## Quickstart
 
@@ -67,9 +83,10 @@ is the reference tenant used by the tests and as the first real deployment.
 
 ## Status
 
-Schema, migrate and catalog import (steps 1–2 of the plan) are done and verified on Windows
-and Linux (WSL Ubuntu 24.04): `cargo test` green, `clippy -D warnings` clean, and a real
-`migrate → import → check` run against a fresh database.
+Works today (steps 1–6 of the plan): schema, migrate, catalog import, PIN login, shift
+open/close with reconciliation, the till (grid, cart, cash/QRIS payment) and the receipt
+layout. 30 tests, green on Windows and Linux, plus a real localhost run driven over HTTP
+(`ops/smoke.sh`).
 
-Next: PIN/shift opening, then the till grid and payment. See `AGENTS.md` for the ordered plan,
-the till UX rules and the open decisions.
+Next: printing to the thermal printer, opening-stock screen, owner reports, master-data
+editing. See `AGENTS.md` for the ordered plan, the till UX rules and the open decisions.
