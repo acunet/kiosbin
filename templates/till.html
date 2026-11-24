@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ outlet_name }} — Kasir{% endblock %}
+{% block body %}
+<header class="top">
+  <div>
+    <div class="brand">{{ outlet_name }}</div>
+    <div class="meta">Kasir {{ cashier }} · shift dibuka {{ opened_at }}{% if low_stock > 0 %} · <span class="bad">stok minus {{ low_stock }}</span>{% endif %}</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="meta">Hari ini: {{ today_count }} nota · {{ today_total_display }}</div>
+  <a class="btn" href="/shift/close">Tutup Shift</a>
+  <form method="post" action="/logout"><button class="btn danger" type="submit">Keluar</button></form>
+</header>
+
+{% if !flash.is_empty() %}<div class="flash">{{ flash }}</div>{% endif %}
+
+<div class="layout">
+  <section>
+    <div class="panel">
+      <input type="search" name="q" value="{{ query }}" placeholder="Cari nama atau kode item…"
+             hx-get="/items" hx-target="#grid" hx-swap="outerHTML"
+             hx-include="[name='group']" hx-trigger="keyup changed delay:150ms, search">
+      <div class="tabs" id="tabs">
+        {% for group in groups %}
+        <a class="tab{% if group.active %} active{% endif %}" href="/?group={{ group.key }}">{{ group.label }}</a>
+        {% endfor %}
+      </div>
+    </div>
+    <div style="margin-top:12px">
+      {% include "partials/items.html" %}
+    </div>
+  </section>
+
+  <aside>
+    {% include "partials/cart.html" %}
+  </aside>
+</div>
+{% endblock %}

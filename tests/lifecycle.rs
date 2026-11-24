@@ -22,7 +22,9 @@ impl TempDb {
     async fn migrated(tag: &str) -> (Self, sqlx::SqlitePool) {
         let temp = TempDb::new(tag);
         let pool = db::open(&temp.path).await.expect("open");
-        db::migrate(&pool, &migrations_dir()).await.expect("migrate");
+        db::migrate(&pool, &migrations_dir())
+            .await
+            .expect("migrate");
         (temp, pool)
     }
 }
@@ -60,7 +62,9 @@ async fn migrates_from_empty_and_is_repeatable() {
     assert_eq!(tables.0, 13, "schema tables created");
 
     // Running it again on an up-to-date database must not fail or duplicate anything.
-    db::migrate(&pool, &migrations_dir()).await.expect("second migrate");
+    db::migrate(&pool, &migrations_dir())
+        .await
+        .expect("second migrate");
 }
 
 #[tokio::test]
@@ -70,7 +74,10 @@ async fn stock_move_for_unknown_item_is_rejected() {
         sqlx::query("INSERT INTO stock_moves (item_id, qty, reason, at) VALUES (9999, 1, 'opening', '2026-11-24 08:00:00')")
             .execute(&pool)
             .await;
-    assert!(result.is_err(), "foreign key on stock_moves.item_id must hold");
+    assert!(
+        result.is_err(),
+        "foreign key on stock_moves.item_id must hold"
+    );
 }
 
 #[tokio::test]
@@ -92,7 +99,10 @@ async fn cashier_cannot_have_two_open_shifts() {
         .bind(50_000)
         .execute(&pool)
         .await;
-    assert!(second.is_err(), "partial unique index must block a second open shift");
+    assert!(
+        second.is_err(),
+        "partial unique index must block a second open shift"
+    );
 
     // A different cashier is still allowed, and a closed shift never blocks.
     sqlx::query(open_shift)
@@ -120,18 +130,32 @@ async fn cashier_cannot_have_two_open_shifts() {
 async fn imports_the_reference_tenant_catalogue() {
     let (_temp, pool) = TempDb::migrated("import").await;
 
-    let first = import::import_catalog(&pool, &tenant_fixture(), false).await.expect("import");
-    assert_eq!(first.items_written, 83, "39 sellable items + 44 raw materials");
+    let first = import::import_catalog(&pool, &tenant_fixture(), false)
+        .await
+        .expect("import");
+    assert_eq!(
+        first.items_written, 83,
+        "39 sellable items + 44 raw materials"
+    );
 
-    let (items,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM items").fetch_one(&pool).await.unwrap();
-    let (recipes,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM recipes").fetch_one(&pool).await.unwrap();
+    let (items,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM items")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    let (recipes,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM recipes")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
     let kinds: Vec<(String, i64)> =
         sqlx::query_as("SELECT kind, COUNT(*) FROM items GROUP BY kind ORDER BY kind")
             .fetch_all(&pool)
             .await
             .unwrap();
     assert_eq!(items, 83);
-    assert_eq!(recipes, 70, "35 recipes / 70 ingredient lines in the fixture");
+    assert_eq!(
+        recipes, 70,
+        "35 recipes / 70 ingredient lines in the fixture"
+    );
     assert_eq!(
         kinds,
         vec![
@@ -147,10 +171,11 @@ async fn imports_the_reference_tenant_catalogue() {
         .fetch_one(&pool)
         .await
         .unwrap();
-    let prefix: (String,) = sqlx::query_as("SELECT value FROM settings WHERE key = 'invoice_prefix'")
-        .fetch_one(&pool)
-        .await
-        .unwrap();
+    let prefix: (String,) =
+        sqlx::query_as("SELECT value FROM settings WHERE key = 'invoice_prefix'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
     assert_eq!(outlet.0, "Warkop 3Dara");
     assert_eq!(prefix.0, "W3D");
 }
@@ -158,36 +183,55 @@ async fn imports_the_reference_tenant_catalogue() {
 #[tokio::test]
 async fn importing_twice_changes_nothing() {
     let (_temp, pool) = TempDb::migrated("twice").await;
-    import::import_catalog(&pool, &tenant_fixture(), false).await.expect("first");
+    import::import_catalog(&pool, &tenant_fixture(), false)
+        .await
+        .expect("first");
 
-    let second = import::import_catalog(&pool, &tenant_fixture(), false).await.expect("second");
-    assert_eq!(second.items_written, 0, "re-import must not insert anything new");
+    let second = import::import_catalog(&pool, &tenant_fixture(), false)
+        .await
+        .expect("second");
+    assert_eq!(
+        second.items_written, 0,
+        "re-import must not insert anything new"
+    );
     assert_eq!(second.items_kept, 83);
     assert_eq!(second.recipes_written, 0);
     assert_eq!(second.settings_added, 0);
 
-    let (recipes,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM recipes").fetch_one(&pool).await.unwrap();
+    let (recipes,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM recipes")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
     assert_eq!(recipes, 70, "no duplicate recipe lines");
 }
 
 #[tokio::test]
 async fn import_keeps_prices_edited_inside_the_pos() {
     let (_temp, pool) = TempDb::migrated("price").await;
-    import::import_catalog(&pool, &tenant_fixture(), false).await.expect("import");
+    import::import_catalog(&pool, &tenant_fixture(), false)
+        .await
+        .expect("import");
 
     sqlx::query("UPDATE items SET price = 21000 WHERE code = 'MN-KOPI-03'")
         .execute(&pool)
         .await
         .unwrap();
 
-    import::import_catalog(&pool, &tenant_fixture(), false).await.expect("re-import");
+    import::import_catalog(&pool, &tenant_fixture(), false)
+        .await
+        .expect("re-import");
     let (price,): (i64,) = sqlx::query_as("SELECT price FROM items WHERE code = 'MN-KOPI-03'")
         .fetch_one(&pool)
         .await
         .unwrap();
-    assert_eq!(price, 21_000, "a plain import must not revert a manual price change");
+    assert_eq!(
+        price, 21_000,
+        "a plain import must not revert a manual price change"
+    );
 
-    import::import_catalog(&pool, &tenant_fixture(), true).await.expect("forced import");
+    import::import_catalog(&pool, &tenant_fixture(), true)
+        .await
+        .expect("forced import");
     let (forced,): (i64,) = sqlx::query_as("SELECT price FROM items WHERE code = 'MN-KOPI-03'")
         .fetch_one(&pool)
         .await
@@ -195,10 +239,11 @@ async fn import_keeps_prices_edited_inside_the_pos() {
     assert_eq!(forced, 18_000, "--force re-reads the catalog price");
 
     // A forced import must still not clobber the outlet settings the owner configured.
-    let (outlet,): (String,) = sqlx::query_as("SELECT value FROM settings WHERE key = 'outlet_name'")
-        .fetch_one(&pool)
-        .await
-        .unwrap();
+    let (outlet,): (String,) =
+        sqlx::query_as("SELECT value FROM settings WHERE key = 'outlet_name'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
     assert_eq!(outlet, "Warkop 3Dara");
 }
 
@@ -218,15 +263,23 @@ async fn import_fails_hard_on_an_unknown_ingredient_and_rolls_back() {
     )
     .unwrap();
 
-    let error = import::import_catalog(&pool, &bad, false).await.expect_err("must fail");
+    let error = import::import_catalog(&pool, &bad, false)
+        .await
+        .expect_err("must fail");
     assert!(
         error.to_string().contains("unknown ingredient"),
         "error should name the broken recipe, got: {error}"
     );
 
     // A failed import leaves nothing behind: the whole thing is one transaction.
-    let (items,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM items").fetch_one(&pool).await.unwrap();
-    let (settings,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM settings").fetch_one(&pool).await.unwrap();
+    let (items,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM items")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    let (settings,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM settings")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
     assert_eq!((items, settings), (0, 0), "rollback left rows behind");
 }
 
@@ -240,23 +293,32 @@ async fn a_minimal_fixture_gets_the_product_defaults() {
     )
     .unwrap();
 
-    import::import_catalog(&pool, &minimal, false).await.expect("import");
+    import::import_catalog(&pool, &minimal, false)
+        .await
+        .expect("import");
 
     let (name,): (String,) = sqlx::query_as("SELECT value FROM settings WHERE key = 'outlet_name'")
         .fetch_one(&pool)
         .await
         .unwrap();
-    let (prefix,): (String,) = sqlx::query_as("SELECT value FROM settings WHERE key = 'invoice_prefix'")
-        .fetch_one(&pool)
-        .await
-        .unwrap();
+    let (prefix,): (String,) =
+        sqlx::query_as("SELECT value FROM settings WHERE key = 'invoice_prefix'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
     let (kind,): (String,) = sqlx::query_as("SELECT kind FROM items WHERE code = 'SKU-1'")
         .fetch_one(&pool)
         .await
         .unwrap();
-    assert_eq!(name, "My Outlet", "no outlet section in the fixture -> product default");
+    assert_eq!(
+        name, "My Outlet",
+        "no outlet section in the fixture -> product default"
+    );
     assert_eq!(prefix, "POS");
-    assert_eq!(kind, "menu", "an item with no kind and no matching rule is a menu item");
+    assert_eq!(
+        kind, "menu",
+        "an item with no kind and no matching rule is a menu item"
+    );
 }
 
 #[tokio::test]
@@ -270,7 +332,9 @@ async fn fixture_kind_wins_over_the_inference_rules() {
     )
     .unwrap();
 
-    import::import_catalog(&pool, &file, false).await.expect("import");
+    import::import_catalog(&pool, &file, false)
+        .await
+        .expect("import");
     let (kind,): (String,) = sqlx::query_as("SELECT kind FROM items WHERE code = 'BB-1'")
         .fetch_one(&pool)
         .await
@@ -279,7 +343,16 @@ async fn fixture_kind_wins_over_the_inference_rules() {
 
     // A kind that is not part of the product's vocabulary is rejected loudly.
     let bad = temp.dir.join("kind-bad.seed.json");
-    std::fs::write(&bad, r#"{"items": [{"code": "X", "name": "X", "kind": "chicken"}]}"#).unwrap();
-    let error = import::import_catalog(&pool, &bad, false).await.expect_err("must fail");
-    assert!(error.to_string().contains("expected one of"), "got: {error}");
+    std::fs::write(
+        &bad,
+        r#"{"items": [{"code": "X", "name": "X", "kind": "chicken"}]}"#,
+    )
+    .unwrap();
+    let error = import::import_catalog(&pool, &bad, false)
+        .await
+        .expect_err("must fail");
+    assert!(
+        error.to_string().contains("expected one of"),
+        "got: {error}"
+    );
 }

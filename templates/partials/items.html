@@ -1,0 +1,13 @@
+<div class="grid" id="grid">
+  {% for item in items %}
+  <button class="btn tile{% if item.no_price %} noprice{% endif %}"
+          hx-post="/cart/add" hx-vals='{"item_id": {{ item.id }}}' hx-target="#cart" hx-swap="outerHTML">
+    <span class="code">{{ item.code }}</span>
+    <span>{{ item.name }}</span>
+    <span class="price">{% if item.no_price %}harga belum diisi{% else %}{{ item.price_display }}{% endif %}</span>
+  </button>
+  {% endfor %}
+  {% if items.is_empty() %}
+  <p class="hint">Tidak ada item yang cocok.</p>
+  {% endif %}
+</div>

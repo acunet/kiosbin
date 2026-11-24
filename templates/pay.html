@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{{ outlet_name }} — Bayar{% endblock %}
+{% block body %}
+<header class="top">
+  <div>
+    <div class="brand">Bayar</div>
+    <div class="meta">Kasir {{ cashier }} · {{ cart.total_qty }} item</div>
+  </div>
+  <div class="spacer"></div>
+  <a class="btn" href="/">Kembali ke kasir</a>
+</header>
+
+{% if !flash.is_empty() %}<div class="flash">{{ flash }}</div>{% endif %}
+
+<div class="layout">
+  <section class="panel">
+    <h2>Rincian</h2>
+    <ul class="lines">
+      {% for line in cart.lines %}
+      <li>
+        <span class="name">{{ line.name }}<br><span class="hint">{{ line.qty }} × {{ line.unit_price_display }}</span></span>
+        <span class="amount">{{ line.amount_display }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    <div class="totals"><span>Subtotal</span><span>{{ cart.subtotal_display }}</span></div>
+    <form method="post" action="/pay" id="payform">
+      <label for="discount">Diskon nota (opsional)</label>
+      <input id="discount" name="discount" type="text" inputmode="numeric" placeholder="0">
+
+      <label>Metode bayar</label>
+      {% for m in methods %}
+      <label style="display:flex;align-items:center;gap:10px;font-size:16px;color:var(--ink);margin:6px 0">
+        <input type="radio" name="method" value="{{ m.name }}" {% if m.checked %}checked{% endif %}
+               style="min-height:0;width:auto">
+        {{ m.name }}
+        {% if m.is_cash %}<span class="hint">(tunai)</span>{% endif %}
+      </label>
+      {% endfor %}
+
+      <label for="received">Uang diterima (untuk tunai)</label>
+      <input id="received" name="received" type="text" inputmode="numeric" placeholder="0">
+      <div class="tabs">
+        {% for q in quick_amounts %}
+        <button type="button" class="tab" onclick="document.getElementById('received').value='{{ q.value }}'">{{ q.label }}</button>
+        {% endfor %}
+      </div>
+
+      <div style="margin-top:16px"><button class="btn primary wide" type="submit">Simpan &amp; cetak</button></div>
+    </form>
+  </section>
+
+  <aside class="panel">
+    <h2>Total</h2>
+    <div class="big">{{ total_display }}</div>
+    <p class="hint">Kembalian dihitung otomatis setelah uang diterima diisi.</p>
+    <script>
+      // Live change preview: no round trip while the customer waits for their money back.
+      const total = {{ total }};
+      const fmt = (n) => "Rp " + n.toLocaleString("id-ID");
+      const received = document.getElementById("received");
+      const out = document.createElement("div");
+      out.className = "big";
+      out.style.fontSize = "24px";
+      received.parentNode.insertBefore(out, received.nextSibling);
+      const update = () => {
+        const digits = (received.value || "").replace(/\D/g, "");
+        const value = digits ? parseInt(digits, 10) : 0;
+        out.textContent = value >= total ? "Kembali " + fmt(value - total) : "";
+      };
+      received.addEventListener("input", update);
+      update();
+    </script>
+  </aside>
+</div>
+{% endblock %}

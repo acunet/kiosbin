@@ -151,10 +151,26 @@ pub async fn import_catalog(pool: &SqlitePool, path: &Path, force: bool) -> Resu
 
     for row in &fixture.raw_materials {
         let uom = if row.uom.is_empty() { "Pcs" } else { &row.uom };
-        upsert_item(&mut tx, &row.code, &row.name, "", 0, uom, "raw", 1, force, &mut report).await?;
+        upsert_item(
+            &mut tx,
+            &row.code,
+            &row.name,
+            "",
+            0,
+            uom,
+            "raw",
+            1,
+            force,
+            &mut report,
+        )
+        .await?;
     }
     for item in &fixture.items {
-        let uom = if item.uom.is_empty() { "Portion" } else { &item.uom };
+        let uom = if item.uom.is_empty() {
+            "Portion"
+        } else {
+            &item.uom
+        };
         let kind = match item.kind.as_deref() {
             Some(kind) => kind,
             None => infer_kind(&item.code, &item.group),
@@ -168,7 +184,15 @@ pub async fn import_catalog(pool: &SqlitePool, path: &Path, force: bool) -> Resu
             .into());
         }
         upsert_item(
-            &mut tx, &item.code, &item.name, &item.group, item.price, uom, kind, item.active, force,
+            &mut tx,
+            &item.code,
+            &item.name,
+            &item.group,
+            item.price,
+            uom,
+            kind,
+            item.active,
+            force,
             &mut report,
         )
         .await?;
@@ -194,7 +218,11 @@ pub async fn import_catalog(pool: &SqlitePool, path: &Path, force: bool) -> Resu
                 )
                 .into());
             }
-            let uom = if line.uom.is_empty() { "Gram" } else { &line.uom };
+            let uom = if line.uom.is_empty() {
+                "Gram"
+            } else {
+                &line.uom
+            };
             let sql = if force {
                 "INSERT INTO recipes (item_id, ingredient_id, qty, uom) VALUES (?, ?, ?, ?)
                  ON CONFLICT (item_id, ingredient_id) DO UPDATE SET qty = excluded.qty, uom = excluded.uom"
@@ -244,7 +272,9 @@ pub async fn import_catalog(pool: &SqlitePool, path: &Path, force: bool) -> Resu
         .find(|m| m.kind == "qris")
         .map(|m| m.name.clone())
         .unwrap_or_default();
-    let now = sqlx::query_scalar::<_, String>(db::NOW_SQL).fetch_one(&mut *tx).await?;
+    let now = sqlx::query_scalar::<_, String>(db::NOW_SQL)
+        .fetch_one(&mut *tx)
+        .await?;
 
     let defaults = [
         ("outlet_name", outlet.name),
@@ -258,18 +288,35 @@ pub async fn import_catalog(pool: &SqlitePool, path: &Path, force: bool) -> Resu
         ("cash_method", cash_method),
         ("qris_method", qris_method),
         ("qris_image", String::new()),
-        ("printer_host", fixture.printing.as_ref().and_then(|p| p.host.clone()).unwrap_or_default()),
-        ("printer_port", fixture.printing.as_ref().and_then(|p| p.port).unwrap_or(9100).to_string()),
+        (
+            "printer_host",
+            fixture
+                .printing
+                .as_ref()
+                .and_then(|p| p.host.clone())
+                .unwrap_or_default(),
+        ),
+        (
+            "printer_port",
+            fixture
+                .printing
+                .as_ref()
+                .and_then(|p| p.port)
+                .unwrap_or(9100)
+                .to_string(),
+        ),
         ("catalog_source", fixture.source.clone().unwrap_or_default()),
         ("catalog_loaded_at", now),
     ];
     for (key, value) in defaults {
         // Settings are the owner's: an existing value is never overwritten by an import.
-        let done = sqlx::query("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO NOTHING")
-            .bind(key)
-            .bind(value)
-            .execute(&mut *tx)
-            .await?;
+        let done = sqlx::query(
+            "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO NOTHING",
+        )
+        .bind(key)
+        .bind(value)
+        .execute(&mut *tx)
+        .await?;
         report.settings_added += done.rows_affected();
     }
 

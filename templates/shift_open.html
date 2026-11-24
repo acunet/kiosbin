@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}{{ outlet_name }} — Buka Shift{% endblock %}
+{% block body %}
+<div class="center">
+  <div class="panel">
+    <h2>Buka Shift</h2>
+    <p class="hint">Kasir: <strong>{{ cashier }}</strong></p>
+    {% if !flash.is_empty() %}<div class="flash" style="margin:0 0 12px">{{ flash }}</div>{% endif %}
+    <form method="post" action="/shift/open">
+      <label for="opening_float">Modal awal di laci (uang tunai)</label>
+      <input id="opening_float" name="opening_float" type="text" inputmode="numeric"
+             placeholder="0" autofocus>
+      <div style="margin-top:16px"><button class="btn primary wide" type="submit">Mulai jualan</button></div>
+    </form>
+    <p class="hint" style="margin-top:12px">Angka ini dipakai untuk menghitung selisih kas saat tutup shift.</p>
+    <form method="post" action="/logout"><button class="btn wide" type="submit" style="margin-top:8px">Keluar</button></form>
+  </div>
+</div>
+{% endblock %}

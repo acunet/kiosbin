@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ outlet_name }} — Nota {{ sale.number }}{% endblock %}
+{% block body %}
+<header class="top">
+  <div>
+    <div class="brand">Nota {{ sale.number }}</div>
+    <div class="meta">{{ sale.at }} · kasir {{ cashier }}</div>
+  </div>
+  <div class="spacer"></div>
+  <a class="btn primary" href="/">Nota baru</a>
+  <a class="btn" href="/shift/close">Tutup shift</a>
+</header>
+
+{% if !flash.is_empty() %}<div class="flash">{{ flash }}</div>{% endif %}
+
+<div class="layout">
+  <section class="panel">
+    <h2>Rincian nota</h2>
+    <table>
+      <tr><th>Item</th><th class="num">Qty</th><th class="num">Harga</th><th class="num">Jumlah</th></tr>
+      {% for line in lines_display %}
+      <tr>
+        <td>{{ line.name }}</td>
+        <td class="num">{{ line.qty }}</td>
+        <td class="num">{{ line.unit }}</td>
+        <td class="num">{{ line.amount }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    <div class="totals"><span>Subtotal</span><span>{{ subtotal_display }}</span></div>
+    {% if sale.discount > 0 %}
+    <div class="totals" style="font-size:16px"><span>Diskon</span><span>-{{ discount_display }}</span></div>
+    {% endif %}
+    <div class="totals"><span>Total</span><span>{{ total_display }}</span></div>
+    <table>
+      <tr><td>Metode</td><td class="num">{{ sale.method }}</td></tr>
+      {% if is_cash %}
+      <tr><td>Tunai diterima</td><td class="num">{{ received_display }}</td></tr>
+      <tr><td>Kembalian</td><td class="num">{{ change_display }}</td></tr>
+      {% endif %}
+    </table>
+    {% if low_stock.len() > 0 %}
+    <p class="hint">Stok bahan di titik nol atau minus: {{ low_stock.join(", ") }}</p>
+    {% endif %}
+  </section>
+
+  <aside class="panel">
+    <h2>Yang akan dicetak ({{ paper_cols }} kolom)</h2>
+    <pre class="paper">{{ paper_preview }}</pre>
+    <p class="hint">Cetak ke printer thermal belum aktif di langkah ini — teks di atas sudah
+      layout final struk {{ paper_cols }} kolom.</p>
+  </aside>
+</div>
+{% endblock %}

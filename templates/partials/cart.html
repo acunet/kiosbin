@@ -1,0 +1,24 @@
+<div class="panel" id="cart">
+  <h2>Keranjang</h2>
+  {% if cart.empty %}
+  <p class="hint">Belum ada item. Ketuk menu di kiri.</p>
+  {% else %}
+  <ul class="lines">
+    {% for line in cart.lines %}
+    <li>
+      <span class="name">{{ line.name }}<br><span class="hint">{{ line.unit_price_display }}</span></span>
+      <button class="qtybtn" hx-post="/cart/qty" hx-vals='{"item_id": {{ line.item_id }}, "qty": {{ line.qty - 1 }}}' hx-target="#cart" hx-swap="outerHTML">−</button>
+      <span class="qty">{{ line.qty }}</span>
+      <button class="qtybtn" hx-post="/cart/qty" hx-vals='{"item_id": {{ line.item_id }}, "qty": {{ line.qty + 1 }}}' hx-target="#cart" hx-swap="outerHTML">+</button>
+      <span class="amount">{{ line.amount_display }}</span>
+      <button class="qtybtn" hx-post="/cart/remove" hx-vals='{"item_id": {{ line.item_id }}}' hx-target="#cart" hx-swap="outerHTML">×</button>
+    </li>
+    {% endfor %}
+  </ul>
+  <div class="totals"><span>Total</span><span>{{ cart.subtotal_display }}</span></div>
+  <a class="btn primary wide" href="/pay">Bayar</a>
+  <div class="row" style="margin-top:8px">
+    <button class="btn" hx-post="/cart/clear" hx-target="#cart" hx-swap="outerHTML">Kosongkan</button>
+  </div>
+  {% endif %}
+</div>

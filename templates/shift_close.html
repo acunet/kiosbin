@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ outlet_name }} — Tutup Shift{% endblock %}
+{% block body %}
+<div class="center">
+  <div class="panel">
+    <h2>Tutup Shift</h2>
+    <p class="hint">Kasir <strong>{{ cashier }}</strong> · dibuka {{ opened_at }}</p>
+    {% if !flash.is_empty() %}<div class="flash" style="margin:0 0 12px">{{ flash }}</div>{% endif %}
+    <form method="post" action="/shift/close">
+      <table>
+        <tr><th>Metode</th><th class="num">Seharusnya</th><th class="num">Hitung fisik</th></tr>
+        {% for line in lines %}
+        <tr>
+          <td>{{ line.method }}{% if line.is_cash %} <span class="hint">(laci)</span>{% endif %}</td>
+          <td class="num">{{ line.expected_display }}</td>
+          <td class="num">
+            <input name="counted_{{ line.method }}" type="text" inputmode="numeric" placeholder="wajib diisi">
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+      <p class="hint">Ketik uang yang benar-benar ada. Jangan biarkan kosong dan jangan mengisi 0
+        kalau laci tidak kosong — selisih inilah yang dipakai untuk kontrol kas.</p>
+      <div style="margin-top:16px"><button class="btn primary wide" type="submit">Tutup shift sekarang</button></div>
+    </form>
+    <div style="margin-top:8px"><a class="btn wide" href="/">Kembali ke kasir</a></div>
+  </div>
+</div>
+{% endblock %}

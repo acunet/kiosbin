@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ outlet_name }} — Shift ditutup{% endblock %}
+{% block body %}
+<div class="center">
+  <div class="panel">
+    <h2>Shift ditutup</h2>
+    <p class="hint">Kasir {{ cashier }}</p>
+    <table>
+      <tr><th>Metode</th><th class="num">Seharusnya</th><th class="num">Hitung fisik</th><th class="num">Selisih</th></tr>
+      {% for line in lines %}
+      <tr>
+        <td>{{ line.method }}</td>
+        <td class="num">{{ line.expected_display }}</td>
+        <td class="num">{{ line.counted_display }}</td>
+        <td class="num {% if line.matched %}ok{% else %}bad{% endif %}">{{ line.diff_display }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    <p class="hint">Selisih 0 berarti uang fisik cocok dengan catatan.</p>
+    <div style="margin-top:16px"><a class="btn wide" href="/logout">Selesai (kunci layar)</a></div>
+  </div>
+</div>
+{% endblock %}

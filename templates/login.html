@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ outlet_name }} — Masuk{% endblock %}
+{% block body %}
+<div class="center">
+  <div class="panel">
+    <h2>{{ outlet_name }}</h2>
+    {% if !flash.is_empty() %}<div class="flash" style="margin:0 0 12px">{{ flash }}</div>{% endif %}
+    <form method="post" action="/login">
+      <label for="cashier">Kasir</label>
+      <select id="cashier" name="cashier">
+        {% for c in cashiers %}
+        <option value="{{ c.name }}">{{ c.name }}{% if c.role == "owner" %} (owner){% endif %}</option>
+        {% endfor %}
+      </select>
+      <label for="pin">PIN</label>
+      <input id="pin" name="pin" type="password" inputmode="numeric" autocomplete="off"
+             pattern="[0-9]*" minlength="4" maxlength="6" autofocus>
+      <div style="margin-top:16px"><button class="btn primary wide" type="submit">Masuk</button></div>
+    </form>
+    <p class="hint" style="margin-top:12px">Belum ada kasir? Buat dari server:
+      <code>kiosbin user add Rina --pin 1234</code></p>
+  </div>
+</div>
+{% endblock %}
