@@ -1,0 +1,10 @@
+# Rust
+/target
+
+# Local database (never commit — it is the live ledger)
+*.db
+*.db-wal
+*.db-shm
+
+# Local overrides
+.env

@@ -1,0 +1,989 @@
+{
+  "source": "erp.warkop3dara.id (Frappe/ERPNext) — dibaca read-only 2026-11-21",
+  "note": "Harga = Item Price Standard Selling IDR per 2026-11-21. Resep = Warkop Recipe docstatus=1. Semua item aktif ikut apa adanya, TIDAK ada yang di-disable. MN-KOPI-07 sengaja price 0 + recipe kosong (duplikat tanpa harga, owner isi nanti).",
+  "pos_profile": "Warkop 3Dara POS",
+  "item_groups": [
+    "Coffee",
+    "Non-Coffee",
+    "Snacks",
+    "Food & Instant",
+    "Add-ons",
+    "Services"
+  ],
+  "payment_methods": [
+    {
+      "name": "Cash",
+      "kind": "cash"
+    },
+    {
+      "name": "QRIS",
+      "kind": "static_qr"
+    }
+  ],
+  "printing": {
+    "mode": "network",
+    "host": "192.168.1.254",
+    "port": 9100,
+    "note": "IP MikroTik, port 9100 di-NAT ke printer. TCP biasa."
+  },
+  "items": [
+    {
+      "code": "MN-AD-BAKSO",
+      "name": "Bakso",
+      "group": "Add-ons",
+      "price": 5000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": []
+    },
+    {
+      "code": "MN-AD-KEJU",
+      "name": "Keju",
+      "group": "Add-ons",
+      "price": 3000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-KEJU-PROCHIZ",
+          "qty": 25.0,
+          "uom": "Gram"
+        }
+      ]
+    },
+    {
+      "code": "MN-AD-KORNET",
+      "name": "Kornet",
+      "group": "Add-ons",
+      "price": 5000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-KORNET",
+          "qty": 50.0,
+          "uom": "Gram"
+        }
+      ]
+    },
+    {
+      "code": "MN-AD-SAYUR",
+      "name": "Sayur",
+      "group": "Add-ons",
+      "price": 3000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-SAYUR-SWI",
+          "qty": 50.0,
+          "uom": "Gram"
+        }
+      ]
+    },
+    {
+      "code": "MN-AD-SOSIS",
+      "name": "Sosis",
+      "group": "Add-ons",
+      "price": 5000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": []
+    },
+    {
+      "code": "MN-AD-TELUR",
+      "name": "Telur",
+      "group": "Add-ons",
+      "price": 5000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-TELUR",
+          "qty": 1.0,
+          "uom": "Pcs"
+        }
+      ]
+    },
+    {
+      "code": "MN-ABCKOPI",
+      "name": "ABC Kopi",
+      "group": "Coffee",
+      "price": 6000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-ABCKOPI",
+          "qty": 1.0,
+          "uom": "Pcs"
+        }
+      ]
+    },
+    {
+      "code": "MN-GOODDAY-CAP",
+      "name": "Goodday Cappucino",
+      "group": "Coffee",
+      "price": 8000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-GOODDAY-CAP",
+          "qty": 1.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-SKM-OMELA",
+          "qty": 15.0,
+          "uom": "Gram"
+        }
+      ]
+    },
+    {
+      "code": "MN-GOODDAY-FRZ",
+      "name": "Goodday Frezze",
+      "group": "Coffee",
+      "price": 8000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-GOODDAY-FRZ",
+          "qty": 1.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-SKM-OMELA",
+          "qty": 15.0,
+          "uom": "Gram"
+        }
+      ]
+    },
+    {
+      "code": "MN-INDOCOFE",
+      "name": "Indocafe",
+      "group": "Coffee",
+      "price": 8000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-INDOCOFE",
+          "qty": 1.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-SKM-OMELA",
+          "qty": 15.0,
+          "uom": "Gram"
+        }
+      ]
+    },
+    {
+      "code": "MN-KAPALAPI",
+      "name": "Kapal Api",
+      "group": "Coffee",
+      "price": 6000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-KAPALAPI",
+          "qty": 1.0,
+          "uom": "Pcs"
+        }
+      ]
+    },
+    {
+      "code": "MN-KOPI-03",
+      "name": "Kopi 3Dara",
+      "group": "Coffee",
+      "price": 18000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-SUSU",
+          "qty": 30.0,
+          "uom": "Ml"
+        },
+        {
+          "item": "BB-GULA-AREN",
+          "qty": 15.0,
+          "uom": "Ml"
+        },
+        {
+          "item": "BB-CUP-16OZ",
+          "qty": 1.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-KOPI",
+          "qty": 15.0,
+          "uom": "Gram"
+        }
+      ]
+    },
+    {
+      "code": "MN-KOPI-04",
+      "name": "Kopi Americano",
+      "group": "Coffee",
+      "price": 15000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-KOPI",
+          "qty": 15.0,
+          "uom": "Gram"
+        },
+        {
+          "item": "BB-CUP-16OZ",
+          "qty": 1.0,
+          "uom": "Pcs"
+        }
+      ]
+    },
+    {
+      "code": "MN-LIONGBULAN",
+      "name": "Liong Bulan",
+      "group": "Coffee",
+      "price": 6000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-LIONGBULAN",
+          "qty": 1.0,
+          "uom": "Pcs"
+        }
+      ]
+    },
+    {
+      "code": "MN-LUWAK",
+      "name": "Luwak White Kopi",
+      "group": "Coffee",
+      "price": 8000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-LUWAKWHITE",
+          "qty": 1.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-SKM-OMELA",
+          "qty": 15.0,
+          "uom": "Gram"
+        }
+      ]
+    },
+    {
+      "code": "MN-SPC-KOPI",
+      "name": "Spesial Kopi",
+      "group": "Coffee",
+      "price": 16000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-NESCAFE-CLS",
+          "qty": 1.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-SKM-OMELA",
+          "qty": 30.0,
+          "uom": "Gram"
+        },
+        {
+          "item": "BB-SUSU",
+          "qty": 100.0,
+          "uom": "Ml"
+        }
+      ]
+    },
+    {
+      "code": "MN-FOOD-01",
+      "name": "Indomie Goreng + Telur",
+      "group": "Food & Instant",
+      "price": 12000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-INDO-GORENG",
+          "qty": 1.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-TELUR",
+          "qty": 1.0,
+          "uom": "Pcs"
+        }
+      ]
+    },
+    {
+      "code": "MN-INDO-BAWANG",
+      "name": "Indomie Ayam Bawang",
+      "group": "Food & Instant",
+      "price": 12000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-INDO-BAWANG",
+          "qty": 1.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-TELUR",
+          "qty": 1.0,
+          "uom": "Pcs"
+        }
+      ]
+    },
+    {
+      "code": "MN-INDO-JOGJA",
+      "name": "Indomie Jogja",
+      "group": "Food & Instant",
+      "price": 21000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-INDO-GORENG",
+          "qty": 1.0,
+          "uom": "Pcs"
+        }
+      ]
+    },
+    {
+      "code": "MN-INDO-KARI",
+      "name": "Indomie Kari Ayam",
+      "group": "Food & Instant",
+      "price": 12000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-INDO-KARI",
+          "qty": 1.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-TELUR",
+          "qty": 1.0,
+          "uom": "Pcs"
+        }
+      ]
+    },
+    {
+      "code": "MN-INDO-RENDANG",
+      "name": "Indomie Goreng Rendang",
+      "group": "Food & Instant",
+      "price": 12000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-INDO-RENDANG",
+          "qty": 1.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-TELUR",
+          "qty": 1.0,
+          "uom": "Pcs"
+        }
+      ]
+    },
+    {
+      "code": "MN-INDO-SOTO",
+      "name": "Indomie Soto",
+      "group": "Food & Instant",
+      "price": 12000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-INDO-SOTO",
+          "qty": 1.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-TELUR",
+          "qty": 1.0,
+          "uom": "Pcs"
+        }
+      ]
+    },
+    {
+      "code": "MN-MIE-AKHIR",
+      "name": "Mie Akhir Bulan",
+      "group": "Food & Instant",
+      "price": 8000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-INDO-KARI",
+          "qty": 1.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-SAYUR-SWI",
+          "qty": 50.0,
+          "uom": "Gram"
+        }
+      ]
+    },
+    {
+      "code": "MN-MIE-AWAL",
+      "name": "Mie Awal Bulan",
+      "group": "Food & Instant",
+      "price": 18000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-INDO-GORENG",
+          "qty": 1.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-TELUR",
+          "qty": 1.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-BAKSO-WRS",
+          "qty": 3.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-SAYUR-SWI",
+          "qty": 50.0,
+          "uom": "Gram"
+        }
+      ]
+    },
+    {
+      "code": "MN-PIZZA-MIE",
+      "name": "Pizza Mie",
+      "group": "Food & Instant",
+      "price": 12000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-INDO-KARI",
+          "qty": 1.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-TELUR",
+          "qty": 1.0,
+          "uom": "Pcs"
+        }
+      ]
+    },
+    {
+      "code": "MN-SPC-BANGLA",
+      "name": "Indomie Special Banglades",
+      "group": "Food & Instant",
+      "price": 12000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-INDO-GORENG",
+          "qty": 1.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-TELUR",
+          "qty": 1.0,
+          "uom": "Pcs"
+        }
+      ]
+    },
+    {
+      "code": "MN-SPC-CARBO",
+      "name": "Indomie Carbonara",
+      "group": "Food & Instant",
+      "price": 25000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-INDO-GORENG",
+          "qty": 1.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-TELUR",
+          "qty": 1.0,
+          "uom": "Pcs"
+        }
+      ]
+    },
+    {
+      "code": "MN-SPC-JOGJA",
+      "name": "Indomie Special Jogja",
+      "group": "Food & Instant",
+      "price": 12000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-INDO-KARI",
+          "qty": 1.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-TELUR",
+          "qty": 1.0,
+          "uom": "Pcs"
+        }
+      ]
+    },
+    {
+      "code": "MN-EXTRAJOSS",
+      "name": "Extra Joss",
+      "group": "Non-Coffee",
+      "price": 10000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-EXTRAJOSS",
+          "qty": 1.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-SKM-OMELA",
+          "qty": 30.0,
+          "uom": "Gram"
+        }
+      ]
+    },
+    {
+      "code": "MN-KOPI-07",
+      "name": "Max Tea Tarik",
+      "group": "Non-Coffee",
+      "price": 0,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": []
+    },
+    {
+      "code": "MN-MAXTEA-TRK",
+      "name": "Max Tea Tarik",
+      "group": "Non-Coffee",
+      "price": 8000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-MAXTEATARIK",
+          "qty": 1.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-SKM-OMELA",
+          "qty": 15.0,
+          "uom": "Gram"
+        }
+      ]
+    },
+    {
+      "code": "MN-MILO",
+      "name": "Milo",
+      "group": "Non-Coffee",
+      "price": 8000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-MILO",
+          "qty": 1.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-SKM-OMELA",
+          "qty": 15.0,
+          "uom": "Gram"
+        }
+      ]
+    },
+    {
+      "code": "MN-NUTRISARI",
+      "name": "Nutrisari",
+      "group": "Non-Coffee",
+      "price": 6000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-NUTRISARI",
+          "qty": 1.0,
+          "uom": "Pcs"
+        }
+      ]
+    },
+    {
+      "code": "MN-SODA-GEMBIRA",
+      "name": "Soda Gembira",
+      "group": "Non-Coffee",
+      "price": 12000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-SODA",
+          "qty": 1.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-SIRUP-BANGAU",
+          "qty": 25.0,
+          "uom": "Ml"
+        },
+        {
+          "item": "BB-SKM-OMELA",
+          "qty": 30.0,
+          "uom": "Gram"
+        }
+      ]
+    },
+    {
+      "code": "MN-SODA-SUSU",
+      "name": "Soda Susu",
+      "group": "Non-Coffee",
+      "price": 12000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-FANTA",
+          "qty": 1.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-SKM-OMELA",
+          "qty": 30.0,
+          "uom": "Gram"
+        }
+      ]
+    },
+    {
+      "code": "MN-TEH-01",
+      "name": "Teh Manis",
+      "group": "Non-Coffee",
+      "price": 6000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-TEH-GREEN",
+          "qty": 1.0,
+          "uom": "Pcs"
+        }
+      ]
+    },
+    {
+      "code": "MN-HOTSPOT-2JAM",
+      "name": "Voucher Hotspot",
+      "group": "Services",
+      "price": 0,
+      "uom": "Unit",
+      "active": 1,
+      "recipe": []
+    },
+    {
+      "code": "MN-SNACK-02",
+      "name": "Roti Bakar",
+      "group": "Snacks",
+      "price": 14000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-ROTI-SR",
+          "qty": 2.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-COKLAT",
+          "qty": 15.0,
+          "uom": "Gram"
+        },
+        {
+          "item": "BB-KEJU-PROCHIZ",
+          "qty": 20.0,
+          "uom": "Gram"
+        },
+        {
+          "item": "BB-SKM-OMELA",
+          "qty": 15.0,
+          "uom": "Gram"
+        }
+      ]
+    },
+    {
+      "code": "MN-SNACK-03",
+      "name": "Pisang Bakar",
+      "group": "Snacks",
+      "price": 14000,
+      "uom": "Portion",
+      "active": 1,
+      "recipe": [
+        {
+          "item": "BB-PISANG",
+          "qty": 2.0,
+          "uom": "Pcs"
+        },
+        {
+          "item": "BB-COKLAT",
+          "qty": 15.0,
+          "uom": "Gram"
+        },
+        {
+          "item": "BB-KEJU-PROCHIZ",
+          "qty": 20.0,
+          "uom": "Gram"
+        },
+        {
+          "item": "BB-SKM-OMELA",
+          "qty": 15.0,
+          "uom": "Gram"
+        }
+      ]
+    }
+  ],
+  "raw_materials": [
+    {
+      "code": "BB-ABCKOPI",
+      "name": "ABC Kopi (sachet)",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-BAKSO-WRS",
+      "name": "Bakso Sapi Warisan (per pcs)",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-CABE",
+      "name": "Cabai (Chili)",
+      "uom": "Gram"
+    },
+    {
+      "code": "BB-COKLAT",
+      "name": "Chocolate Sprinkles (Meises)",
+      "uom": "Gram"
+    },
+    {
+      "code": "BB-CUP-16OZ",
+      "name": "Plastic Cup 16oz + Lid + Straw",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-CUP-PPR",
+      "name": "Paper Cup / Mug",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-EXTRAJOSS",
+      "name": "Extra Joss (sachet)",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-FANTA",
+      "name": "Fanta (per botol)",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-GOODDAY-CAP",
+      "name": "Goodday Cappucino (sachet)",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-GOODDAY-FRZ",
+      "name": "Goodday Frezze (sachet)",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-GULA",
+      "name": "Gula Pasir (Granulated Sugar)",
+      "uom": "Gram"
+    },
+    {
+      "code": "BB-GULA-AREN",
+      "name": "Gula Aren Cair (Liquid Palm Sugar)",
+      "uom": "Ml"
+    },
+    {
+      "code": "BB-INDO-BAWANG",
+      "name": "Indomie Ayam Bawang (per pcs)",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-INDO-GORENG",
+      "name": "Indomie Goreng (per pcs)",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-INDO-KARI",
+      "name": "Indomie Kari Ayam (per pcs)",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-INDO-RENDANG",
+      "name": "Indomie Goreng Rendang (per pcs)",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-INDO-SOTO",
+      "name": "Indomie Soto (per pcs)",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-INDOCOFE",
+      "name": "Indocafe (sachet)",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-INDOGORENG",
+      "name": "Indomie Goreng",
+      "uom": "Pack"
+    },
+    {
+      "code": "BB-KAPALAPI",
+      "name": "Kapal Api (sachet)",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-KEJU",
+      "name": "Keju (Cheese)",
+      "uom": "Gram"
+    },
+    {
+      "code": "BB-KEJU-PROCHIZ",
+      "name": "Keju Prochiz Gold (per gram)",
+      "uom": "Gram"
+    },
+    {
+      "code": "BB-KOPI",
+      "name": "Biji Kopi Espresso Blend",
+      "uom": "Gram"
+    },
+    {
+      "code": "BB-KOPI-GRND",
+      "name": "Ground Coffee (Bubuk)",
+      "uom": "Gram"
+    },
+    {
+      "code": "BB-KORNET",
+      "name": "Kornet Pronas (per gram)",
+      "uom": "Gram"
+    },
+    {
+      "code": "BB-LIONGBULAN",
+      "name": "Liong Bulan (sachet)",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-LUWAKWHITE",
+      "name": "Luwak White Coffee (sachet)",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-MAXTEATARIK",
+      "name": "Max Tea Tarik (sachet)",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-MILO",
+      "name": "Milo (sachet)",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-NESCAFE-CLS",
+      "name": "Nescafe Classic (per sachet)",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-NUTRISARI",
+      "name": "Nutrisari (sachet)",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-PISANG",
+      "name": "Pisang (per pcs)",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-PREMIX",
+      "name": "Premix Pancong (Batter Premix)",
+      "uom": "Gram"
+    },
+    {
+      "code": "BB-ROTI-SR",
+      "name": "Roti Sari Roti (per lembar)",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-SAYUR",
+      "name": "Sayuran (Vegetables)",
+      "uom": "Gram"
+    },
+    {
+      "code": "BB-SAYUR-SWI",
+      "name": "Sayur Sawi (per gram)",
+      "uom": "Gram"
+    },
+    {
+      "code": "BB-SIRUP-BANGAU",
+      "name": "Sirup Bangau (per ml)",
+      "uom": "Ml"
+    },
+    {
+      "code": "BB-SKM-OMELA",
+      "name": "SKM Omela (per gram)",
+      "uom": "Gram"
+    },
+    {
+      "code": "BB-SODA",
+      "name": "Soda (per botol)",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-SUSU",
+      "name": "Susu UHT Full Cream",
+      "uom": "Ml"
+    },
+    {
+      "code": "BB-SUSU-KENTAL",
+      "name": "Susu Kental Manis (Condensed Milk)",
+      "uom": "Ml"
+    },
+    {
+      "code": "BB-TEH",
+      "name": "Teh Daun Lepas (Loose Tea Leaves)",
+      "uom": "Gram"
+    },
+    {
+      "code": "BB-TEH-GREEN",
+      "name": "Teh Cap Hijau (sachet)",
+      "uom": "Pcs"
+    },
+    {
+      "code": "BB-TELUR",
+      "name": "Telur Ayam (Egg)",
+      "uom": "Pcs"
+    }
+  ]
+}
