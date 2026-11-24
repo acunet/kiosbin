@@ -5,9 +5,9 @@
           title="{{ item.code }}">
     <span class="item-name">{{ item.name }}</span>
     <span class="item-foot">
-      <span class="item-price{% if item.no_price %} unset{% endif %}">{% if item.no_price %}harga belum diisi{% else %}{{ item.price_display }}{% endif %}</span>
+      <span class="item-price{% if item.no_price %} unset{% endif %}">{% if item.no_price %}{{ t.price_missing }}{% else %}{{ item.price_display }}{% endif %}</span>
       {% if item.has_availability %}
-      <span class="badge-stock {{ item.stock_class }}">{% if item.sold_out %}Habis{% else %}{{ item.availability }}{% endif %}</span>
+      <span class="badge-stock {{ item.stock_class }}">{% if item.sold_out %}{{ t.sold_out }}{% else %}{{ item.availability }}{% endif %}</span>
       {% endif %}
     </span>
   </button>

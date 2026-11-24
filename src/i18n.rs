@@ -122,6 +122,15 @@ catalog! {
     printer_none:          "Belum ada printer dikonfigurasi" | "No printer configured yet",
     low_stock_fix:         "Koreksi lewat opname sebelum jualan ramai." | "Put it right with a stock count before the rush.",
     units:                 "item" | "items",
+    cols:                  "kolom" | "cols",
+    price_missing:         "harga belum diisi" | "no price set",
+    sold_out:              "Habis" | "Out",
+    cash_goes_to_drawer:   "uang tunai di laci" | "cash into the drawer",
+    check_transfer:        "cek mutasi setelahnya" | "check the transfer afterwards",
+    difference_explained:  "Selisih 0 = uang fisik cocok dengan catatan. Selisih minus = uang di laci kurang dari catatan."
+                         | "A difference of 0 means the cash matches the record. A negative difference means the drawer is short.",
+    low_stock_after:       "Bahan berikut sudah nol atau minus setelah nota ini:" | "These ingredients are at or below zero after this receipt:",
+    print_not_wired:       "Cetak ke printer thermal belum aktif di langkah ini — teks di atas sudah layout final struk" | "Printing to the thermal printer is not wired up at this step — the text above is the final layout for a",
     hours_short:           "j" | "h",
 
     // ---- things the cashier is told to do differently ----------------------------

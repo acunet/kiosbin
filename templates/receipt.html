@@ -58,7 +58,7 @@
           {% endif %}
           {% if low_stock.len() > 0 %}
           <div class="alert info" style="margin:14px 0 0">
-            Bahan berikut sudah nol atau minus setelah nota ini: <b>{{ low_stock.join(", ") }}</b>
+            {{ t.low_stock_after }} <b>{{ low_stock.join(", ") }}</b>
           </div>
           {% endif %}
         </div>
@@ -67,12 +67,11 @@
       <aside class="panel">
         <div class="panel-head">
           <span class="panel-title">{{ t.about_to_print }}</span>
-          <span class="pill">{{ paper_cols }} kolom</span>
+          <span class="pill">{{ paper_cols }} {{ t.cols }}</span>
         </div>
         <div style="padding:12px 14px 16px">
           <pre class="paper">{{ paper_preview }}</pre>
-          <p class="hint">Cetak ke printer thermal belum aktif di langkah ini — teks di atas sudah
-            layout final struk {{ paper_cols }} kolom.</p>
+          <p class="hint">{{ t.print_not_wired }} {{ paper_cols }} {{ t.cols }}.</p>
         </div>
       </aside>
     </div>

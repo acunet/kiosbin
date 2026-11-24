@@ -52,7 +52,7 @@
                 <input type="radio" name="method" value="{{ m.name }}" {% if m.checked %}checked{% endif %}>
                 <span>
                   <span class="name">{{ m.name }}</span><br>
-                  <span class="kind">{% if m.is_cash %}uang tunai di laci{% else %}cek mutasi setelahnya{% endif %}</span>
+                  <span class="kind">{% if m.is_cash %}{{ t.cash_goes_to_drawer }}{% else %}{{ t.check_transfer }}{% endif %}</span>
                 </span>
               </label>
               {% endfor %}
