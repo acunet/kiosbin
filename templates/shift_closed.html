@@ -1,15 +1,15 @@
 {% extends "base.html" %}
-{% block title %}{{ outlet_name }} — Shift ditutup{% endblock %}
+{% block title %}{{ outlet_name }} — {{ t.shift_closed }}{% endblock %}
 {% block body %}
 <div class="centred" style="padding-top:48px">
   <div class="card wide-card">
     <div class="card-head">
-      <div class="panel-title" style="font-size:17px">Shift ditutup</div>
-      <div class="hint">Kasir <b>{{ cashier }}</b> · {{ closed_at }}</div>
+      <div class="panel-title" style="font-size:17px">{{ t.shift_closed }}</div>
+      <div class="hint">{{ t.cashier }} <b>{{ cashier }}</b> · {{ closed_at }}</div>
     </div>
     <div class="card-body">
       <table>
-        <tr><th>Metode</th><th class="num">Seharusnya</th><th class="num">Hitung fisik</th><th class="num">Selisih</th></tr>
+        <tr><th>{{ t.method }}</th><th class="num">{{ t.expected }}</th><th class="num">{{ t.counted }}</th><th class="num">{{ t.difference }}</th></tr>
         {% for line in lines %}
         <tr>
           <td>{{ line.method }}</td>
@@ -24,7 +24,7 @@
       </p>
     </div>
     <div class="card-foot">
-      <a class="btn btn-block btn-primary" href="/logout">Selesai — kunci layar</a>
+      <a class="btn btn-block btn-primary" href="/logout">{{ t.done_lock_screen }}</a>
     </div>
   </div>
 </div>

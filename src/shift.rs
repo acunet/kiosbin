@@ -130,10 +130,7 @@ pub async fn close(
             .find(|(method, _)| method == &row.method)
             .and_then(|(_, counted)| *counted)
             .ok_or_else(|| {
-                BoxError::from(format!(
-                    "masukkan jumlah fisik untuk {} — jangan dibiarkan kosong",
-                    row.method
-                ))
+                BoxError::from(format!("{} {}", settings.t().count_required, row.method))
             })?;
         lines.push(CountLine {
             method: row.method,

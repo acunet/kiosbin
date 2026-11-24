@@ -53,12 +53,13 @@ fn wrap(name: &str, width: usize) -> Vec<String> {
 /// The full receipt as monospace lines, exactly `paper_cols` wide.
 pub fn lines(settings: &Settings, sale: &SaleResult) -> Vec<String> {
     let cols = settings.paper_cols();
+    let t = settings.t();
     let mut out = vec![
         centre(&settings.outlet_name().to_uppercase(), cols),
         String::new(),
         row("No", &sale.number, cols),
-        row("Tanggal", sale.at.get(..16).unwrap_or(&sale.at), cols),
-        row("Kasir", &sale.cashier, cols),
+        row(t.date, sale.at.get(..16).unwrap_or(&sale.at), cols),
+        row(t.cashier, &sale.cashier, cols),
         rule(cols),
     ];
 
@@ -81,10 +82,10 @@ pub fn lines(settings: &Settings, sale: &SaleResult) -> Vec<String> {
     }
 
     out.push(rule(cols));
-    out.push(row("Subtotal", &settings.money(sale.subtotal), cols));
+    out.push(row(t.sub_total, &settings.money(sale.subtotal), cols));
     if sale.discount > 0 {
         out.push(row(
-            "Diskon",
+            t.discount,
             &format!("-{}", settings.money(sale.discount)),
             cols,
         ));
@@ -93,12 +94,12 @@ pub fn lines(settings: &Settings, sale: &SaleResult) -> Vec<String> {
     out.push(rule(cols));
     out.push(row(&sale.method, &settings.money(sale.total), cols));
     if let (Some(received), Some(change)) = (sale.received, sale.change) {
-        out.push(row("Tunai", &settings.money(received), cols));
-        out.push(row("Kembali", &settings.money(change), cols));
+        out.push(row(t.cash_received, &settings.money(received), cols));
+        out.push(row(t.change, &settings.money(change), cols));
     }
 
     out.push(String::new());
-    out.push(centre("Terima kasih", cols));
+    out.push(centre(t.thank_you, cols));
     out.push(String::new());
     out
 }
@@ -117,6 +118,7 @@ mod tests {
         map.insert("outlet_name".to_string(), "Warkop 3Dara".to_string());
         map.insert("paper_cols".to_string(), "32".to_string());
         map.insert("invoice_prefix".to_string(), "W3D".to_string());
+        map.insert("language".to_string(), "id".to_string());
         Settings::from_map(map)
     }
 
@@ -167,5 +169,26 @@ mod tests {
         assert!(text.contains("Kembali"));
         assert!(text.contains("Rp 14.000"));
         assert!(text.contains("W3D-20261124-001"));
+    }
+
+    /// The paper the customer keeps follows the outlet's language — and its money follows the
+    /// currency, which the language has nothing to do with.
+    #[test]
+    fn an_english_outlet_gets_an_english_receipt() {
+        let mut map = std::collections::HashMap::new();
+        map.insert("outlet_name".to_string(), "Corner Deli".to_string());
+        map.insert("paper_cols".to_string(), "32".to_string());
+        map.insert("currency_symbol".to_string(), "$".to_string());
+        map.insert("currency_decimals".to_string(), "2".to_string());
+        map.insert("language".to_string(), "en".to_string());
+        map.insert("currency_group_sep".to_string(), ",".to_string());
+        let text = lines(&Settings::from_map(map), &sale()).join("\n");
+        assert!(text.contains("Change"), "receipt in English: {text}");
+        assert!(text.contains("Thank you"));
+        assert!(!text.contains("Kembali"), "no Indonesian left");
+        assert!(
+            text.contains("$ 140.00"),
+            "money follows the currency: {text}"
+        );
     }
 }

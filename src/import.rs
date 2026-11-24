@@ -55,6 +55,10 @@ pub struct Outlet {
     pub invoice_prefix: Option<String>,
     #[serde(default)]
     pub paper_cols: Option<i64>,
+    #[serde(default)]
+    pub language: Option<String>,
+    #[serde(default)]
+    pub group_sep: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -283,6 +287,8 @@ pub async fn import_catalog(pool: &SqlitePool, path: &Path, force: bool) -> Resu
         ("currency_decimals", outlet.currency_decimals.to_string()),
         ("invoice_prefix", outlet.invoice_prefix),
         ("paper_cols", outlet.paper_cols.to_string()),
+        ("language", outlet.language),
+        ("currency_group_sep", outlet.group_sep),
         ("payment_methods", methods.join(",")),
         // Which method's money lands in the drawer; data, never baked into code.
         ("cash_method", cash_method),
@@ -380,6 +386,8 @@ struct OutletSettings {
     currency_decimals: u32,
     invoice_prefix: String,
     paper_cols: i64,
+    language: String,
+    group_sep: String,
 }
 
 impl OutletSettings {
@@ -392,6 +400,8 @@ impl OutletSettings {
             currency_decimals: outlet.currency_decimals.unwrap_or(0),
             invoice_prefix: outlet.invoice_prefix.unwrap_or_else(|| "POS".to_string()),
             paper_cols: outlet.paper_cols.unwrap_or(48),
+            language: outlet.language.unwrap_or_default(),
+            group_sep: outlet.group_sep.unwrap_or_else(|| ".".to_string()),
         }
     }
 }

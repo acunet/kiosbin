@@ -269,8 +269,10 @@ async fn a_blank_count_is_refused_and_a_typed_zero_is_recorded() {
     .await
     .expect_err("an empty count must not close the shift");
     assert!(
-        blank.to_string().contains("masukkan jumlah fisik"),
-        "{blank}"
+        blank
+            .to_string()
+            .contains("jumlah fisik belum diisi untuk Cash"),
+        "the refusal is spoken in the shop's language: {blank}"
     );
 
     // Typed 0 -> accepted, and the difference shows the drawer really is short.

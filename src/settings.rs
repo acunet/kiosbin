@@ -27,6 +27,11 @@ impl Settings {
         self.get("outlet_name")
     }
 
+    /// The shop's strings, in the outlet's language. Unknown or missing means English.
+    pub fn t(&self) -> crate::i18n::T {
+        crate::i18n::T::of(&self.get("language"))
+    }
+
     pub fn invoice_prefix(&self) -> String {
         let prefix = self.get("invoice_prefix");
         if prefix.is_empty() {
@@ -65,7 +70,7 @@ impl Settings {
                 }
             },
             decimals: self.get("currency_decimals").parse().unwrap_or(0),
-            group_sep: '.',
+            group_sep: self.get("currency_group_sep").chars().next().unwrap_or('.'),
         }
     }
 

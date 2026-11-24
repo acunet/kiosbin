@@ -1,18 +1,18 @@
 {% extends "base.html" %}
-{% block title %}{{ outlet_name }} — Nota {{ sale.number }}{% endblock %}
+{% block title %}{{ outlet_name }} — {{ t.receipt }} {{ sale.number }}{% endblock %}
 {% block body %}
 <div class="app">
   <nav class="rail">
     <div class="mark">K</div>
-    <a href="/" title="Kasir">
+    <a href="/" title="{{ t.cashier }}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
     </a>
-    <a href="/shift/close" title="Tutup shift">
+    <a href="/shift/close" title="{{ t.close_shift }}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
     </a>
     <div class="spacer"></div>
     <form method="post" action="/logout">
-      <button class="rail-btn" type="submit" title="Keluar">
+      <button class="rail-btn" type="submit" title="{{ t.sign_out }}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg>
       </button>
     </form>
@@ -21,12 +21,12 @@
   <main>
     <header class="topbar">
       <div>
-        <div class="brand">Nota <span class="tnum">{{ sale.number }}</span></div>
-        <div class="hint">{{ sale.at }} · kasir <b>{{ cashier }}</b></div>
+        <div class="brand">{{ t.receipt }} <span class="tnum">{{ sale.number }}</span></div>
+        <div class="hint">{{ sale.at }} · {{ t.cashier }} <b>{{ cashier }}</b></div>
       </div>
       <div class="spacer"></div>
-      <a class="btn btn-primary" href="/">Nota baru</a>
-      <a class="btn" href="/shift/close">Tutup shift</a>
+      <a class="btn btn-primary" href="/">{{ t.new_sale }}</a>
+      <a class="btn" href="/shift/close">{{ t.close_shift }}</a>
     </header>
 
     {% if !flash.is_empty() %}<div class="alert">⚠ {{ flash }}</div>{% endif %}
@@ -34,7 +34,7 @@
     <div class="workspace">
       <section class="panel">
         <div class="panel-head">
-          <span class="panel-title">Rincian nota</span>
+          <span class="panel-title">{{ t.receipt_lines }}</span>
           <div class="spacer"></div>
           <span class="pill ok">{{ sale.method }}</span>
         </div>
@@ -47,14 +47,14 @@
             </li>
             {% endfor %}
           </ul>
-          <div class="totals-row" style="margin-top:12px"><span>Subtotal</span><span class="tnum">{{ subtotal_display }}</span></div>
+          <div class="totals-row" style="margin-top:12px"><span>{{ t.sub_total }}</span><span class="tnum">{{ subtotal_display }}</span></div>
           {% if sale.discount > 0 %}
-          <div class="totals-row"><span>Diskon</span><span class="tnum">-{{ discount_display }}</span></div>
+          <div class="totals-row"><span>{{ t.discount }}</span><span class="tnum">-{{ discount_display }}</span></div>
           {% endif %}
-          <div class="totals-row grand"><span>Total</span><b class="tnum">{{ total_display }}</b></div>
+          <div class="totals-row grand"><span>{{ t.total }}</span><b class="tnum">{{ total_display }}</b></div>
           {% if is_cash %}
-          <div class="totals-row"><span>Tunai diterima</span><span class="tnum">{{ received_display }}</span></div>
-          <div class="totals-row"><span>Kembalian</span><span class="tnum">{{ change_display }}</span></div>
+          <div class="totals-row"><span>{{ t.cash_received }}</span><span class="tnum">{{ received_display }}</span></div>
+          <div class="totals-row"><span>{{ t.change }}</span><span class="tnum">{{ change_display }}</span></div>
           {% endif %}
           {% if low_stock.len() > 0 %}
           <div class="alert info" style="margin:14px 0 0">
@@ -66,7 +66,7 @@
 
       <aside class="panel">
         <div class="panel-head">
-          <span class="panel-title">Yang akan dicetak</span>
+          <span class="panel-title">{{ t.about_to_print }}</span>
           <span class="pill">{{ paper_cols }} kolom</span>
         </div>
         <div style="padding:12px 14px 16px">

@@ -195,7 +195,7 @@ async fn a_wrong_pin_does_not_get_in_and_a_right_one_does() {
 
     let (status, body, _) = get(&app, "/shift/open", cookie.as_deref()).await;
     assert_eq!(status, StatusCode::OK);
-    assert!(body.contains("Buka Shift"));
+    assert!(body.contains("Buka shift"));
 }
 
 #[tokio::test]
@@ -278,5 +278,58 @@ async fn a_full_till_run_from_login_to_receipt() {
     assert!(
         body.contains("Rp 0"),
         "the counted box was typed, not auto-filled"
+    );
+}
+
+#[tokio::test]
+async fn an_outlet_runs_the_whole_screen_in_english() {
+    let app = app("english").await;
+    // The language is outlet data, exactly like the currency: nothing is baked into the code.
+    sqlx::query("UPDATE settings SET value = 'en' WHERE key = 'language'")
+        .execute(&app.pool)
+        .await
+        .expect("language");
+
+    let (status, login, cookie) = get(&app, "/login", None).await;
+    assert_eq!(status, StatusCode::OK);
+    for expected in ["Sign in", "Cashier", "Enter the cashier PIN to start"] {
+        assert!(
+            login.contains(expected),
+            "the login page should say {expected:?}"
+        );
+    }
+    assert!(
+        !login.contains("Masuk"),
+        "no Indonesian on an English screen"
+    );
+
+    let (_, _, cookie) = post(&app, "/login", "cashier=Rina&pin=1234", cookie.as_deref()).await;
+    let cookie = cookie.as_deref().unwrap().to_string();
+
+    // A fresh cashier lands on the shift screen — and the cash buttons come from the fixture's
+    // currency, not from a string somebody typed into the template.
+    let (status, shift, _) = get(&app, "/shift/open", Some(&cookie)).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(
+        shift.contains("Open shift"),
+        "shift page in English: {shift:.300}"
+    );
+    assert!(shift.contains("Start selling"), "and its action too");
+    assert!(!shift.contains("Mulai jualan"), "no Indonesian left");
+
+    let (_, _, _) = post(&app, "/shift/open", "opening_float=100000", Some(&cookie)).await;
+    let (status, till, _) = get(&app, "/", Some(&cookie)).await;
+    assert_eq!(status, StatusCode::OK);
+    for expected in [
+        "Cart",
+        "Close shift",
+        "Next receipt",
+        "Search code or item name",
+    ] {
+        assert!(till.contains(expected), "the till should say {expected:?}");
+    }
+    assert!(
+        !till.contains("Keranjang"),
+        "the cart header must be translated"
     );
 }

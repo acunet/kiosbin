@@ -146,6 +146,7 @@ pub fn redirect(to: &str) -> Response {
 #[derive(Template)]
 #[template(path = "login.html")]
 pub struct LoginTemplate {
+    pub t: crate::i18n::T,
     pub outlet_name: String,
     pub cashiers: Vec<crate::users::Cashier>,
     pub flash: String,
@@ -164,6 +165,7 @@ async fn login_page(State(state): State<AppState>, session: Session) -> Response
     }
     render(LoginTemplate {
         outlet_name: settings.outlet_name(),
+        t: settings.t(),
         cashiers,
         flash: take_flash(&session).await,
     })
@@ -299,6 +301,7 @@ pub async fn cart_view(
 #[derive(Template)]
 #[template(path = "partials/cart.html")]
 pub struct CartPartial {
+    pub t: crate::i18n::T,
     pub cart: CartView,
 }
 

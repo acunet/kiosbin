@@ -5,6 +5,7 @@
 pub mod cart;
 pub mod catalog;
 pub mod db;
+pub mod i18n;
 pub mod import;
 pub mod money;
 pub mod print;

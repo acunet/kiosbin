@@ -55,6 +55,22 @@ impl Currency {
     }
 }
 
+#[cfg(test)]
+mod separator_tests {
+    use super::Currency;
+
+    #[test]
+    fn thousands_separator_follows_the_currency() {
+        let dollars = Currency {
+            symbol: "$".to_string(),
+            decimals: 2,
+            group_sep: ',',
+        };
+        assert_eq!(dollars.format(125_000_000), "$ 1,250,000.00");
+        assert_eq!(Currency::rupiah().format(1_250_000), "Rp 1.250.000");
+    }
+}
+
 /// Reads what a cashier types: `"26.000"`, `"Rp 26000"`, `"50000"`.
 ///
 /// Every non-digit is treated as a separator, which is exact for zero-decimal currencies

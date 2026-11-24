@@ -1,10 +1,10 @@
 <div class="cart-panel" id="cart">
   <div class="cart-head">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:17px"><path d="M6 8h12l1 12H5z"/><path d="M9 8a3 3 0 0 1 6 0"/></svg>
-    <span>Keranjang · {{ cart.total_qty }} pcs</span>
+    <span>{{ t.cart }} · {{ cart.total_qty }} pcs</span>
     <div class="spacer"></div>
     {% if !cart.empty %}
-    <button class="btn btn-x" hx-post="/cart/clear" hx-swap="none">Kosongkan</button>
+    <button class="btn btn-x" hx-post="/cart/clear" hx-swap="none">{{ t.clear }}</button>
     {% endif %}
   </div>
 
@@ -13,8 +13,8 @@
     <div class="bag">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:26px;height:26px"><path d="M6 8h12l1 12H5z"/><path d="M9 8a3 3 0 0 1 6 0"/></svg>
     </div>
-    <strong>Keranjang masih kosong</strong>
-    <span class="hint">Ketuk menu di kiri untuk mulai.</span>
+    <strong>{{ t.cart_empty }}</strong>
+    <span class="hint">{{ t.cart_empty_hint }}</span>
   </div>
   {% else %}
   <ul class="cart-lines">
@@ -22,7 +22,7 @@
     <li class="cart-line{% if line.out_of_stock %} warn{% endif %}">
       <span class="name">
         {{ line.name }}
-        {% if line.out_of_stock %}<span class="chip-warn">bahan habis</span>{% endif %}
+        {% if line.out_of_stock %}<span class="chip-warn">{{ t.out_of_stock }}</span>{% endif %}
         {% if line.qty > 1 %}<span class="unit">{{ line.unit_price_display }} / item</span>{% endif %}
       </span>
       <span class="amount tnum">{{ line.amount_display }}</span>
@@ -38,11 +38,11 @@
   {% endif %}
 
   <div class="cart-foot">
-    <div class="totals-row grand"><span>Total</span><b class="tnum">{{ cart.subtotal_display }}</b></div>
+    <div class="totals-row grand"><span>{{ t.total }}</span><b class="tnum">{{ cart.subtotal_display }}</b></div>
     {% if cart.empty %}
-    <button class="btn btn-xl btn-block" disabled>Bayar</button>
+    <button class="btn btn-xl btn-block" disabled>{{ t.pay }}</button>
     {% else %}
-    <a class="btn btn-primary btn-xl btn-pay" href="/pay"><span>Bayar</span><span class="tnum">{{ cart.subtotal_display }}</span></a>
+    <a class="btn btn-primary btn-xl btn-pay" href="/pay"><span>{{ t.pay }}</span><span class="tnum">{{ cart.subtotal_display }}</span></a>
     {% endif %}
   </div>
 </div>

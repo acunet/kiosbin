@@ -1,17 +1,17 @@
 {% extends "base.html" %}
-{% block title %}{{ outlet_name }} — Bayar{% endblock %}
+{% block title %}{{ outlet_name }} — {{ t.pay }}{% endblock %}
 {% block body %}
 <div class="app">
   <nav class="rail">
     <div class="mark">K</div>
-    <a href="/" title="Kasir">
+    <a href="/" title="{{ t.cashier }}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
     </a>
-    <a class="active" href="/pay" title="Bayar">
+    <a class="active" href="/pay" title="{{ t.pay }}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h2.2l2.3 11.2A2 2 0 0 0 8.5 16h9.9a2 2 0 0 0 2-1.6L22 7H5"/></svg>
     </a>
     <div class="spacer"></div>
-    <a href="/" title="Keluar dari pembayaran">
+    <a href="/" title="{{ t.leave_payment }}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg>
     </a>
   </nav>
@@ -19,11 +19,11 @@
   <main>
     <header class="topbar">
       <div>
-        <div class="brand">Pembayaran</div>
-        <div class="hint">{{ cart.total_qty }} item · kasir <b>{{ cashier }}</b></div>
+        <div class="brand">{{ t.payment }}</div>
+        <div class="hint">{{ cart.total_qty }} {{ t.units }} · {{ t.cashier }} <b>{{ cashier }}</b></div>
       </div>
       <div class="spacer"></div>
-      <a class="btn btn-quiet" href="/">← Kembali ke kasir</a>
+      <a class="btn btn-quiet" href="/">← {{ t.back_to_till }}</a>
     </header>
 
     {% if !flash.is_empty() %}<div class="alert">⚠ {{ flash }}</div>{% endif %}
@@ -33,11 +33,11 @@
         <div class="card-head">
           <div class="pay-total">
             <div>
-              <div class="hint">Total tagihan</div>
+              <div class="hint">{{ t.amount_due }}</div>
               <div class="big tnum">{{ total_display }}</div>
             </div>
             <div class="side">
-              <div class="label">Kembalian</div>
+              <div class="label">{{ t.change }}</div>
               <div class="value tnum" id="change">—</div>
             </div>
           </div>
@@ -45,7 +45,7 @@
 
         <form method="post" action="/pay" id="payform">
           <div class="card-body">
-            <label class="field">Metode bayar</label>
+            <label class="field">{{ t.payment_method }}</label>
             <div class="methods">
               {% for m in methods %}
               <label class="method">
@@ -58,7 +58,7 @@
               {% endfor %}
             </div>
 
-            <label class="field" for="received">Uang diterima (tunai)</label>
+            <label class="field" for="received">{{ t.cash_tendered }}</label>
             <input class="text tnum" id="received" name="received" type="text" inputmode="numeric"
                    placeholder="0" autocomplete="off" autofocus>
             <div class="quick">
@@ -67,14 +67,14 @@
               {% endfor %}
             </div>
 
-            <label class="field" for="discount">Diskon nota (opsional)</label>
+            <label class="field" for="discount">{{ t.invoice_discount }}</label>
             <input class="text tnum" id="discount" name="discount" type="text" inputmode="numeric" placeholder="0">
           </div>
 
           <div class="card-foot">
             <div class="row">
-              <a class="btn" href="/">Batal</a>
-              <button class="btn btn-primary" type="submit" id="submit">Simpan &amp; cetak nota</button>
+              <a class="btn" href="/">{{ t.cancel }}</a>
+              <button class="btn btn-primary" type="submit" id="paysubmit">{{ t.save_and_print }}</button>
             </div>
           </div>
         </form>
@@ -85,7 +85,7 @@
 
 <aside class="centred" style="padding-top:0">
   <div class="card wide-card">
-    <div class="card-head"><span class="panel-title">Rincian nota</span></div>
+    <div class="card-head"><span class="panel-title">{{ t.receipt_lines }}</span></div>
     <div class="card-body">
       <ul class="receipt-lines">
         {% for line in cart.lines %}
@@ -95,8 +95,8 @@
         </li>
         {% endfor %}
       </ul>
-      <div class="totals-row" style="margin-top:10px"><span>Subtotal</span><span class="tnum">{{ cart.subtotal_display }}</span></div>
-      <div class="totals-row grand"><span>Total</span><b class="tnum">{{ cart.subtotal_display }}</b></div>
+      <div class="totals-row" style="margin-top:10px"><span>{{ t.sub_total }}</span><span class="tnum">{{ cart.subtotal_display }}</span></div>
+      <div class="totals-row grand"><span>{{ t.total }}</span><b class="tnum">{{ cart.subtotal_display }}</b></div>
     </div>
   </div>
 </aside>

@@ -1,26 +1,26 @@
 {% extends "base.html" %}
-{% block title %}{{ outlet_name }} — Masuk{% endblock %}
+{% block title %}{{ outlet_name }} — {{ t.sign_in }}{% endblock %}
 {% block body %}
 <div class="centred" style="padding-top:56px">
   <div class="card">
     <div class="card-head" style="text-align:center">
       <div style="width:48px;height:48px;margin:0 auto 10px;border-radius:14px;background:linear-gradient(140deg,var(--brand),#4aa3ff);color:#fff;font-weight:800;font-size:22px;display:grid;place-items:center">K</div>
       <div class="brand" style="font-size:19px">{{ outlet_name }}</div>
-      <div class="hint">Masukkan PIN kasir untuk mulai</div>
+      <div class="hint">{{ t.login_hint }}</div>
     </div>
 
     <form method="post" action="/login" id="loginform">
       <div class="card-body">
         {% if !flash.is_empty() %}<div class="alert" style="margin:0 0 12px">⚠ {{ flash }}</div>{% endif %}
 
-        <label class="field" for="cashier">Kasir</label>
+        <label class="field" for="cashier">{{ t.cashier }}</label>
         <select class="text" id="cashier" name="cashier">
           {% for c in cashiers %}
           <option value="{{ c.name }}">{{ c.name }}{% if c.role == "owner" %} · owner{% endif %}</option>
           {% endfor %}
         </select>
 
-        <label class="field" for="pin">PIN</label>
+        <label class="field" for="pin">{{ t.pin }}</label>
         <input class="text pin-display" id="pin" name="pin" type="password" inputmode="numeric"
                autocomplete="off" maxlength="6" placeholder="••••">
 
@@ -36,7 +36,7 @@
           <button type="button" onclick="tap('9')">9</button>
           <button type="button" class="grey" onclick="tap('del')">⌫</button>
           <button type="button" onclick="tap('0')">0</button>
-          <button type="submit" class="ok">Masuk</button>
+          <button type="submit" class="ok">{{ t.sign_in }}</button>
         </div>
       </div>
     </form>

@@ -51,19 +51,35 @@ export PATH="$HOME/.cargo/bin:$PATH"
 cargo run -- migrate                                  # create/upgrade kiosbin.db
 cargo run -- import fixtures/warkop3dara.seed.json     # load an outlet fixture
 cargo run -- check                                    # counts, items without a price, negative stock
-cargo test                                            # 13 tests
+cargo test                                            # 36 tests
 ```
 
 Expected import output:
 
 ```text
-import: ok  items written=83 kept=0  recipe lines=70  uom conversions added=4  settings added=14
+import: ok  items written=83 kept=0  recipe lines=70  uom conversions added=4  settings added=16
 import: ok  items written=0 kept=83  recipe lines=0  uom conversions added=0  settings added=0   # re-import: nothing duplicated
 ```
 
 `--db PATH` (or `KIOSBIN_DB`) points at another database file. `import --force` re-reads the
 catalog from the fixture when the source changed; a plain import never overwrites rows an
 outlet has edited.
+
+## Languages and money formats
+
+The till, the shift screens and the printed receipt follow the outlet's `language` setting:
+`"id"` (Indonesian) or `"en"` (English). It comes from the fixture, or from the `settings` table,
+and it is read per request — switching it does not need a restart. An outlet that names no
+language gets English.
+
+Language and money are separate settings, on purpose: `currency_symbol`, `currency_decimals` and
+`currency_group_sep` decide how money prints (`Rp 1.250.000` vs `$ 1,250,000.00`), so an English
+shop in a country that groups with commas says so once and the language is irrelevant to it.
+
+**Every string a person reads lives in `src/i18n.rs`** — one table with both languages side by
+side. Adding a string is one row and the code will not compile until both sides of that row are
+filled in; adding a language is one more column. Templates and handlers contain no text of their
+own, so a third language costs one file and no template edits.
 
 ## Tenants
 
@@ -78,6 +94,7 @@ is the reference tenant used by the tests and as the first real deployment.
 - A stock balance is never stored; it is `SUM(stock_moves.qty)`.
 - Only ingredients (and paid add-ons with a recipe) are stock-tracked; menu items are not.
 - Sales are voided, never deleted: status + reversing moves, invoice numbers never reused.
+- Text a person reads only ever comes from `src/i18n.rs`; money formats from the currency settings.
 - One open shift per cashier, enforced by a unique index in the database.
 - Print failures never block a sale, and every attempt is logged.
 

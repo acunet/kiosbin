@@ -13,6 +13,6 @@
   </button>
   {% endfor %}
   {% if items.is_empty() %}
-  <div class="empty-grid">Tidak ada item yang cocok dengan pencarian itu.</div>
+  <div class="empty-grid">{{ t.no_search_results }}</div>
   {% endif %}
 </div>

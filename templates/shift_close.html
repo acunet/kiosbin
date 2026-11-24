@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}{{ outlet_name }} — Tutup Shift{% endblock %}
+{% block title %}{{ outlet_name }} — {{ t.close_shift }}{% endblock %}
 {% block body %}
 <div class="centred" style="padding-top:32px">
   <div class="card wide-card">
     <div class="card-head">
-      <div class="panel-title" style="font-size:17px">Tutup shift</div>
-      <div class="hint">Kasir <b>{{ cashier }}</b> · shift dibuka {{ opened_at }}</div>
+      <div class="panel-title" style="font-size:17px">{{ t.close_shift }}</div>
+      <div class="hint">{{ t.cashier }} <b>{{ cashier }}</b> · {{ t.shift_opened }} {{ opened_at }}</div>
     </div>
 
     <form method="post" action="/shift/close" id="closeform">
@@ -14,23 +14,23 @@
 
         <table>
           <tr>
-            <th>Metode</th>
-            <th class="num">Seharusnya</th>
-            <th class="num">Hitung fisik</th>
-            <th class="num">Selisih</th>
+            <th>{{ t.method }}</th>
+            <th class="num">{{ t.expected }}</th>
+            <th class="num">{{ t.counted }}</th>
+            <th class="num">{{ t.difference }}</th>
           </tr>
           {% for line in lines %}
           <tr>
             <td>
               {{ line.method }}
-              {% if line.is_cash %}<div class="q hint">uang di laci</div>{% endif %}
+              {% if line.is_cash %}<div class="q hint">{{ t.cash_in_drawer }}</div>{% endif %}
             </td>
             <td class="num tnum">{{ line.expected_display }}</td>
             <td class="num">
               <input class="text tnum" name="counted_{{ line.method }}" type="text" inputmode="numeric"
-                     placeholder="wajib diisi" style="text-align:right;max-width:150px;margin-left:auto">
+                     placeholder="{{ t.required_field }}" style="text-align:right;max-width:150px;margin-left:auto">
             </td>
-            <td class="num hint">setelah disimpan</td>
+            <td class="num hint">{{ t.after_saving }}</td>
           </tr>
           {% endfor %}
         </table>
@@ -50,16 +50,13 @@
           <button type="button" class="grey" onclick="tap('del')">⌫</button>
         </div>
 
-        <p class="hint" style="margin-top:12px">
-          Ketik uang yang <b>benar-benar ada</b>. Kotak kosong akan ditolak — itu disengaja:
-          selisih kas inilah yang dipakai untuk kontrol. Jangan mengisi 0 kalau laci tidak kosong.
-        </p>
+        <p class="hint" style="margin-top:12px">{{ t.count_note }}</p>
       </div>
 
       <div class="card-foot">
         <div class="row">
-          <a class="btn" href="/">Kembali ke kasir</a>
-          <button class="btn btn-primary" type="submit">Tutup shift sekarang</button>
+          <a class="btn" href="/">{{ t.back_to_till }}</a>
+          <button class="btn btn-primary" type="submit">{{ t.close_shift_now }}</button>
         </div>
       </div>
     </form>

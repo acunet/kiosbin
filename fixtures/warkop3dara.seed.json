@@ -8,7 +8,7 @@
     "symbol": "Rp",
     "currency_decimals": 0,
     "invoice_prefix": "W3D",
-    "paper_cols": 48
+    "paper_cols": 48, "language": "id", "group_sep": "."
   },
   "payment_methods": [
     {

@@ -26,6 +26,7 @@ struct GroupTab {
 #[derive(Template)]
 #[template(path = "till.html")]
 struct TillTemplate {
+    t: crate::i18n::T,
     outlet_name: String,
     cashier: String,
     initial: String,
@@ -47,6 +48,7 @@ struct TillTemplate {
 #[derive(Template)]
 #[template(path = "partials/items.html")]
 struct ItemsPartial {
+    t: crate::i18n::T,
     items: Vec<crate::web::ItemTile>,
 }
 
@@ -132,6 +134,7 @@ async fn render_till(
     };
 
     Ok(render(TillTemplate {
+        t: settings.t(),
         outlet_name: settings.outlet_name(),
         initial: user
             .cashier
@@ -173,6 +176,7 @@ pub async fn items_partial(
         .unwrap_or_default();
     match grid_items(&state, &query).await {
         Ok(items) => render(ItemsPartial {
+            t: settings.t(),
             items: tiles(items, &settings, &availability),
         }),
         Err(e) => bad_request(e.to_string()),
@@ -185,7 +189,10 @@ pub async fn cart_partial(State(state): State<AppState>, session: Session) -> Re
         Err(e) => return bad_request(e.to_string()),
     };
     match cart_view(&state.pool, &settings, &session_id(&session)).await {
-        Ok(view) => render(CartPartial { cart: view }),
+        Ok(view) => render(CartPartial {
+            t: settings.t(),
+            cart: view,
+        }),
         Err(e) => bad_request(e.to_string()),
     }
 }
@@ -258,14 +265,15 @@ struct MethodOption {
 }
 
 #[derive(Debug, Clone)]
-struct QuickAmount {
-    label: String,
-    value: i64,
+pub(super) struct QuickAmount {
+    pub(super) label: String,
+    pub(super) value: i64,
 }
 
 #[derive(Template)]
 #[template(path = "pay.html")]
 struct PayTemplate {
+    t: crate::i18n::T,
     outlet_name: String,
     cashier: String,
     cart: crate::web::CartView,
@@ -313,6 +321,7 @@ pub async fn pay_page(State(state): State<AppState>, session: Session) -> Respon
     }
     let cash_method = settings.cash_method();
     render(PayTemplate {
+        t: settings.t(),
         outlet_name: settings.outlet_name(),
         cashier: user.cashier,
         total: cart.subtotal,
@@ -368,7 +377,27 @@ pub async fn pay(
     let discount = crate::money::parse(&form.discount).unwrap_or(0);
     let received = crate::money::parse(&form.received);
 
+    // The rules themselves live in sale::create; these are the two a cashier hits in normal use,
+    // said in the shop's language and checked before any money changes hands.
     let sid = session_id(&session);
+    let t = settings.t();
+    let view = match cart_view(&state.pool, &settings, &sid).await {
+        Ok(v) => v,
+        Err(e) => {
+            set_flash(&session, e.to_string()).await;
+            return redirect("/pay");
+        }
+    };
+    if view.empty {
+        set_flash(&session, t.cart_is_empty.to_string()).await;
+        return redirect("/pay");
+    }
+    if form.method == settings.cash_method() && received.is_some_and(|given| given < view.subtotal)
+    {
+        set_flash(&session, t.cash_short.to_string()).await;
+        return redirect("/pay");
+    }
+
     let lines = match cart::lines(&state.pool, &sid).await {
         Ok(lines) => lines,
         Err(e) => {
@@ -408,6 +437,7 @@ struct LineDisplay {
 #[derive(Template)]
 #[template(path = "receipt.html")]
 struct ReceiptTemplate {
+    t: crate::i18n::T,
     outlet_name: String,
     cashier: String,
     sale: crate::sale::SaleResult,
@@ -438,7 +468,7 @@ pub async fn receipt(
     };
     let sale = match sale::by_id(&state.pool, sale_id).await {
         Ok(Some(s)) => s,
-        Ok(None) => return bad_request("nota tidak ditemukan"),
+        Ok(None) => return bad_request(settings.t().sale_not_found),
         Err(e) => return bad_request(e.to_string()),
     };
     let low_stock = crate::stock::items_at_or_below_zero(&state.pool)
@@ -451,6 +481,7 @@ pub async fn receipt(
         .unwrap_or_default();
 
     render(ReceiptTemplate {
+        t: settings.t(),
         outlet_name: settings.outlet_name(),
         cashier: sale.cashier.clone(),
         lines_display: sale

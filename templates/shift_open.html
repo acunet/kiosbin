@@ -1,26 +1,24 @@
 {% extends "base.html" %}
-{% block title %}{{ outlet_name }} — Buka Shift{% endblock %}
+{% block title %}{{ outlet_name }} — {{ t.open_shift }}{% endblock %}
 {% block body %}
 <div class="centred" style="padding-top:48px">
   <div class="card">
     <div class="card-head">
-      <div class="panel-title" style="font-size:17px">Buka shift</div>
-      <div class="hint">Kasir <b>{{ cashier }}</b> · hitung uang tunai yang ada di laci sekarang</div>
+      <div class="panel-title" style="font-size:17px">{{ t.open_shift }}</div>
+      <div class="hint">Kasir <b>{{ cashier }}</b> · {{ t.open_shift_hint }}</div>
     </div>
 
     <form method="post" action="/shift/open" id="openform">
       <div class="card-body">
         {% if !flash.is_empty() %}<div class="alert" style="margin:0 0 12px">⚠ {{ flash }}</div>{% endif %}
 
-        <label class="field" for="opening_float">Modal awal di laci</label>
+        <label class="field" for="opening_float">{{ t.opening_float }}</label>
         <input class="text tnum" id="opening_float" name="opening_float" type="text" inputmode="numeric"
                placeholder="0" autocomplete="off" style="text-align:right;font-size:22px;font-weight:800">
 
         <div class="quick" style="margin-bottom:6px">
-          <button type="button" onclick="setFloat(0)">Kosong (0)</button>
-          <button type="button" onclick="setFloat(50000)">Rp 50.000</button>
-          <button type="button" onclick="setFloat(100000)">Rp 100.000</button>
-          <button type="button" onclick="setFloat(200000)">Rp 200.000</button>
+          <button type="button" onclick="setFloat(0)">{{ t.quick_empty }}</button>
+          {% for q in quick %}<button type="button" onclick="setFloat({{ q.value }})">{{ q.label }}</button>{% endfor %}
         </div>
 
         <div class="keypad">
@@ -38,16 +36,16 @@
           <button type="button" class="grey" onclick="tap('del')">⌫</button>
         </div>
 
-        <p class="hint" style="margin-top:12px">Angka ini dipakai menghitung selisih kas waktu tutup
-          shift. Isi apa adanya — bukan angka yang “seharusnya”.</p>
+        <p class="hint" style="margin-top:12px">{{ t.opening_float_note }}</p>
       </div>
       <div class="card-foot">
         <div class="row">
-          <button class="btn btn-primary" type="submit">Mulai jualan</button>
+          <button class="btn btn-primary" type="submit">{{ t.start_selling }}</button>
         </div>
-        <form method="post" action="/logout"><button class="btn btn-block btn-quiet" type="submit">Keluar</button></form>
+        <button class="btn btn-block btn-quiet" type="submit" form="logoutform">{{ t.sign_out }}</button>
       </div>
     </form>
+    <form method="post" action="/logout" id="logoutform"></form>
   </div>
 </div>
 <script>

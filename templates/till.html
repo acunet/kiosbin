@@ -1,22 +1,22 @@
 {% extends "base.html" %}
-{% block title %}{{ outlet_name }} — Kasir{% endblock %}
+{% block title %}{{ outlet_name }} — {{ t.cashier }}{% endblock %}
 {% block body %}
 <div class="app">
   <nav class="rail">
     <div class="mark">K</div>
-    <a class="active" href="/" title="Kasir">
+    <a class="active" href="/" title="{{ t.cashier }}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
     </a>
-    <a href="/pay" title="Bayar">
+    <a href="/pay" title="{{ t.pay }}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h2.2l2.3 11.2A2 2 0 0 0 8.5 16h9.9a2 2 0 0 0 2-1.6L22 7H5"/></svg>
     </a>
-    <a href="/shift/close" title="Tutup shift">
+    <a href="/shift/close" title="{{ t.close_shift }}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
     </a>
     <div class="spacer"></div>
     <div class="bottom">
       <form method="post" action="/logout">
-        <button class="rail-btn" type="submit" title="Keluar">
+        <button class="rail-btn" type="submit" title="{{ t.sign_out }}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg>
         </button>
       </form>
@@ -27,7 +27,7 @@
     <header class="topbar">
       <div>
         <div class="brand">{{ outlet_name }}</div>
-        <div class="hint">Nota berikutnya <b class="tnum">{{ next_number_hint }}</b></div>
+        <div class="hint">{{ t.next_receipt }} <b class="tnum">{{ next_number_hint }}</b></div>
       </div>
       <span class="pill brandpill">{{ invoice_prefix }}</span>
       <div class="spacer"></div>
@@ -37,29 +37,29 @@
           <b class="tnum" data-clock>--:--:--</b>
         </span>
         <span class="sep"></span>
-        <span class="stat" data-shift-opened="{{ opened_at }}">Shift aktif</span>
+        <span class="stat" data-shift-opened="{{ opened_at }}">{{ t.shift_active }}</span>
         <span class="sep"></span>
         <span class="stat{% if !printer_ready %} warn{% endif %}"
-              title="{% if printer_ready %}Struk dicetak ke {{ printer_label }}{% else %}Belum ada printer dikonfigurasi{% endif %}">
+              title="{% if printer_ready %}{{ t.printer_prints_to }} {{ printer_label }}{% else %}{{ t.printer_none }}{% endif %}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="7" rx="2"/><path d="M7 16h10v5H7z"/></svg>
-          {% if printer_ready %}Printer siap{% else %}Printer belum diset{% endif %}
+          {% if printer_ready %}{{ t.printer_ready }}{% else %}{{ t.printer_missing }}{% endif %}
         </span>
         <span class="sep"></span>
         <span class="stat">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>
-          Hari ini <b>{{ today_count }}</b> nota · <b class="tnum">{{ today_total_display }}</b>
+          {{ t.today }} <b>{{ today_count }}</b> {{ t.receipts_sold }} · <b class="tnum">{{ today_total_display }}</b>
         </span>
       </div>
-      <a class="btn" href="/shift/close">Tutup shift</a>
+      <a class="btn" href="/shift/close">{{ t.close_shift }}</a>
       <div class="who">
         <span class="avatar">{{ initial }}</span>
-        <span class="hint">Kasir <b>{{ cashier }}</b></span>
+        <span class="hint">{{ t.cashier }} <b>{{ cashier }}</b></span>
       </div>
     </header>
 
     {% if !flash.is_empty() %}<div class="alert">⚠ {{ flash }}</div>{% endif %}
-    {% if low_stock > 0 %}<div class="alert info">Bahan berikut sudah nol atau minus: <b>{{ low_stock }}</b> item.
-      Koreksi lewat opname sebelum jualan ramai.</div>{% endif %}
+    {% if low_stock > 0 %}<div class="alert info">{{ t.low_stock }} <b>{{ low_stock }}</b> {{ t.units }}.
+      {{ t.low_stock_fix }}</div>{% endif %}
 
     <div class="workspace">
       <section>
@@ -71,14 +71,14 @@
         <div class="search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
           <input type="search" name="q" value="{{ query }}" autofocus
-                 placeholder="Cari kode atau nama item…"
+                 placeholder="{{ t.search_placeholder }}"
                  hx-get="/items" hx-target="#grid" hx-swap="outerHTML"
                  hx-trigger="keyup changed delay:150ms, search">
         </div>
         <div class="kbd-row" style="margin:8px 2px 6px">
-          <span><span class="kbd">Enter</span> tambah hasil pertama</span>
-          <span><span class="kbd">F2</span> bayar</span>
-          <span><span class="kbd">Esc</span> batal</span>
+          <span><span class="kbd">Enter</span> {{ t.hint_add_first }}</span>
+          <span><span class="kbd">F2</span> {{ t.hint_pay }}</span>
+          <span><span class="kbd">Esc</span> {{ t.hint_cancel }}</span>
         </div>
         {% include "partials/items.html" %}
       </section>

@@ -13,9 +13,11 @@ use crate::web::{bad_request, redirect, render, set_flash, take_flash, whoami, A
 #[derive(Template)]
 #[template(path = "shift_open.html")]
 struct ShiftOpenTemplate {
+    t: crate::i18n::T,
     outlet_name: String,
     cashier: String,
     flash: String,
+    quick: Vec<super::till::QuickAmount>,
 }
 
 #[derive(Clone)]
@@ -31,6 +33,7 @@ struct CountView {
 #[derive(Template)]
 #[template(path = "shift_close.html")]
 struct ShiftCloseTemplate {
+    t: crate::i18n::T,
     outlet_name: String,
     cashier: String,
     opened_at: String,
@@ -41,6 +44,7 @@ struct ShiftCloseTemplate {
 #[derive(Template)]
 #[template(path = "shift_closed.html")]
 struct ShiftClosedTemplate {
+    t: crate::i18n::T,
     outlet_name: String,
     cashier: String,
     closed_at: String,
@@ -59,8 +63,19 @@ pub async fn open_page(State(state): State<AppState>, session: Session) -> Respo
         Ok(Some(_)) => redirect("/"),
         Ok(None) => render(ShiftOpenTemplate {
             outlet_name: settings.outlet_name(),
+            t: settings.t(),
             cashier: user.cashier,
             flash: take_flash(&session).await,
+            // Cash buttons come from the currency, not from the code: a shop that counts in
+            // dollars gets dollars.
+            // Zero is already the "empty" button, so it is not repeated as a money button.
+            quick: [50_000i64, 100_000, 200_000]
+                .into_iter()
+                .map(|value| super::till::QuickAmount {
+                    value,
+                    label: settings.money(value),
+                })
+                .collect(),
         }),
         Err(e) => bad_request(e.to_string()),
     }
@@ -110,6 +125,7 @@ pub async fn close_page(State(state): State<AppState>, session: Session) -> Resp
 
     render(ShiftCloseTemplate {
         outlet_name: settings.outlet_name(),
+        t: settings.t(),
         cashier: user.cashier,
         opened_at: shift.opened_at.clone(),
         lines: expected
@@ -163,6 +179,7 @@ pub async fn close(
     match crate::shift::close(&state.pool, &shift, &settings, &counts).await {
         Ok(lines) => render(ShiftClosedTemplate {
             outlet_name: settings.outlet_name(),
+            t: settings.t(),
             cashier: user.cashier,
             closed_at: sqlx::query_scalar::<_, String>(crate::db::NOW_SQL)
                 .fetch_one(&state.pool)

@@ -83,6 +83,9 @@ diedit — tambah file baru.
 - Impor bersifat **menambah**: baris dan setting yang sudah ada tidak ditimpa; `--force` untuk
   sengaja me-refresh katalog (D6).
 - Resep menunjuk bahan tidak dikenal → **gagal keras + rollback** (D7).
+- **Tidak ada teks yang dibaca orang di template/handler.** Semuanya di `src/i18n.rs` (tabel satu
+  baris = dua bahasa); template nulis `{{ t.xxx }}`. Nambah bahasa = satu kolom, nambah string =
+  satu baris — dan kode tidak akan compile sampai kedua sisi baris itu diisi.
 
 ---
 
@@ -271,7 +274,13 @@ Struk: tidak ada baris > `paper_cols` kolom. Build & tes **hijau di Windows dan 
    sini skema milik sendiri + tes migrasi dari DB kosong.
 7. **Jangan mencampur `opening` dan `expected`** di laporan.
 8. **Harga 0 harus bertanya**, bukan menjual gratis.
-9. **Jangan simpan saldo stok.** Warisan Bin negatif adalah hasil menyimpan saldo yang tidak pernah
+9. **Kontrol form dengan `id="submit"` menimpa `form.submit()`.** Tombol bayar punya
+   `id="submit"`, jadi `document.getElementById("payform").submit()` di shortcut Enter/F2 melempar
+   error dan pembayaran keyboard mati diam-diam. Jangan pernah pakai `id`/`name` `submit`, `action`,
+   atau `method` di kontrol form.
+10. **Form bersarang = HTML invalid.** Form logout di dalam form shift membuat tombol Keluar
+   men-submit form buka-shift. Pakai `<button form="logoutform">` + form terpisah di luar.
+11. **Jangan simpan saldo stok.** Warisan Bin negatif adalah hasil menyimpan saldo yang tidak pernah
    direkonsiliasi.
 
 ---

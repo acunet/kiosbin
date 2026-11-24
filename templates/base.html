@@ -364,7 +364,7 @@
       if (shift) {
         const started = new Date(shift.dataset.shiftOpened.replace(" ", "T"));
         const mins = Math.max(0, Math.floor((now - started) / 60000));
-        shift.textContent = "Shift " + Math.floor(mins / 60) + "j " + (mins % 60) + "m";
+        shift.textContent = "{{ t.shift_active }} " + Math.floor(mins / 60) + "{{ t.hours_short }} " + (mins % 60) + "m";
       }
     };
     tick();
