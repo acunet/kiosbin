@@ -22,6 +22,15 @@ pub async fn open(path: &Path) -> Result<SqlitePool, sqlx::Error> {
         .await
 }
 
+/// The one dialect seam: the database is the single source of "now", so every
+/// timestamp in the app comes from the same clock.
+pub const NOW_SQL: &str = "SELECT datetime('now', 'localtime')";
+
+/// Current local timestamp, as stored in `TEXT` columns.
+pub async fn now(pool: &SqlitePool) -> Result<String, sqlx::Error> {
+    sqlx::query_scalar(NOW_SQL).fetch_one(pool).await
+}
+
 /// Runs every pending migration in `dir`. Safe to call on an empty file and on a
 /// file that is already up to date (sqlx keeps `_sqlx_migrations`).
 pub async fn migrate(pool: &SqlitePool, dir: &Path) -> Result<(), sqlx::migrate::MigrateError> {

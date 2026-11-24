@@ -1,9 +1,9 @@
 [package]
-name = "warkop-pos"
+name = "rustpos"
 version = "0.1.0"
 edition = "2021"
-description = "Warkop 3Dara POS — single-binary point of sale with a raw-material stock ledger"
-license = "AGPL-3.0-or-later"
+description = "RustPOS — self-hosted point of sale with a raw-material stock ledger, in one binary"
+publish = false
 
 [dependencies]
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "sqlite", "migrate"] }

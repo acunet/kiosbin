@@ -1,6 +1,18 @@
 # ASSESSMENT — RustPOS (mengganti ERPNext untuk POS + stock)
 
-> **Tanggal:** 2026-11-24 · **Status:** assessment (belum ada kode) · **Target:** repo baru `RustPOS`
+> **Status dokumen (2026-11-24):** ini assessment yang jadi asal-usul produk, ditulis saat
+> RustPOS masih direncanakan khusus untuk Warkop 3Dara. RustPOS sekarang **produk general**
+> (lihat `README.md`, `docs/PRODUCT.md`, `docs/DECISIONS.md`); Warkop 3Dara adalah tenant uji
+> pertama lewat `fixtures/warkop3dara.seed.json`.
+>
+> Nama di bawah ini sudah berubah setelah generalisasi — baca dengan pemetaan ini:
+> `warkop-pos` → `rustpos` · `cargo run -- seed` → `cargo run -- import <fixture>` ·
+> `AGENTS.warkop-pos.md`/`docs/rust-pos/` di repo lama → `AGENTS.md` di repo RustPOS ·
+> repo baru `RustPOS` = `C:\Users\mansu\dev\RustPOS` (repo git sendiri).
+> Isi teknis, jebakan, dan urutan langkah di bawah masih berlaku, kecuali yang sudah diputuskan
+> ulang di `docs/DECISIONS.md`.
+
+> **Tanggal asli:** 2026-11-24 · **Target:** repo `RustPOS`
 > **Yang dinilai:** `docs/rust-pos/AGENTS.warkop-pos.md` + `docs/rust-pos/warkop_seed.json`,
 > dibandingkan ulang dengan kode hidup di `pos_next/`, `warkop3dara_app/`, dan catatan prod
 > (`docs/CHANGELOG.md`, `docs/DEVELOPMENT_STATUS.md`).

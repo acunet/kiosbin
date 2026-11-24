@@ -1,59 +1,75 @@
-# Warkop 3Dara POS (RustPOS)
+# RustPOS
 
-A single-binary point of sale for one small Indonesian coffee shop, replacing a full
-Frappe v15 + ERPNext v15 + POSNext deployment that was far too heavy for 3–11 sales a day
-(±23k lines of POS Python, ±60k lines of frontend, 113 API endpoints, 13 DocTypes just for
-shifts and offers).
+A self-hosted point of sale for small shops, cafés and warungs — **one binary, one SQLite
+file, no cloud and no npm**. It does the two jobs a small outlet actually needs: take
+payment at the till, and keep an honest stock ledger of the ingredients behind every sale.
 
-What is kept from the ERP world: a **stock ledger for raw materials** driven by recipes.
-What is dropped: accounting/GL, taxes, payroll, MRP, wallet/loyalty, promotions, credit sales,
-table service, multi-warehouse, batches/serials.
+Built to replace installs where a full ERP (Frappe/ERPNext + a Vue POS: ±23k lines of POS
+Python, ±60k lines of frontend, 113 API endpoints) was doing the work of 3–11 receipts a day.
 
-## Stack
+## Why one binary instead of a service + frontend
 
-Rust · `axum` (web, landing soon) · SQLite via `sqlx` (WAL) · HTMX + Askama (server-rendered,
-no npm, no build step) · ESC/POS over TCP for the thermal printer.
+The UI is server-rendered (HTMX + Askama templates compiled into the binary), so there is no
+second build, no API version skew, no CORS, no stale JS bundle and nothing to install on the
+till besides opening a browser. Deploying = copying one file and starting one systemd unit.
+If a native/mobile client is ever needed, the HTTP boundary is already the seam to split on.
+
+## What it does
+
+- **Till**: item grid + search by code/name, cart, quantity, paid add-ons as their own lines,
+  per-line notes, cash with change, static QRIS, invoice-level discount.
+- **Shifts**: open with a float, per-method expected vs counted, EOD report. `counted` is
+  typed by the cashier and never auto-filled from `expected` — that is what keeps cash
+  control alive.
+- **Stock ledger**: recipes deduct ingredients on submit, `SUM(stock_moves.qty)` is the
+  balance (never stored), opening stock, stock-takes, waste, purchases (cost → margin).
+- **Vouchers**: service items (WiFi/access vouchers) can issue a code per unit and print it
+  on the receipt.
+- **Owner reports** that open on a phone, plus CSV.
 
 ## Quickstart
 
 ```bash
 export PATH="$HOME/.cargo/bin:$PATH"
 
-cargo run -- migrate                        # create/upgrade warkop.db
-cargo run -- seed seed/warkop_seed.json     # catalogue snapshot: 39 menu items + 44 ingredients
-cargo run -- check                          # counts, items without a price, ingredients at/below zero
-cargo test                                  # money, migration, constraints, seed idempotency
+cargo run -- migrate                                  # create/upgrade rustpos.db
+cargo run -- import fixtures/warkop3dara.seed.json     # load an outlet fixture
+cargo run -- check                                    # counts, items without a price, negative stock
+cargo test                                            # 13 tests
 ```
 
-`--db PATH` (or `WARKOP_DB`) points at a different database file.
-
-Expected seed output:
+Expected import output:
 
 ```text
-seed: ok  items written=83 kept=0  recipe lines=70  uom conversions added=4  settings added=8
-seed: ok  items written=0 kept=83  recipe lines=0  uom conversions added=0  settings added=0   # re-run: nothing duplicated
+import: ok  items written=83 kept=0  recipe lines=70  uom conversions added=4  settings added=14
+import: ok  items written=0 kept=83  recipe lines=0  uom conversions added=0  settings added=0   # re-import: nothing duplicated
 ```
+
+`--db PATH` (or `RUSTPOS_DB`) points at another database file. `import --force` re-reads the
+catalog from the fixture when the source changed; a plain import never overwrites rows an
+outlet has edited.
+
+## Tenants
+
+Everything shop-specific lives in a **fixture** (`fixtures/*.seed.json`): outlet name,
+currency, invoice prefix, printer target, payment methods, UOM conversions, catalog, recipes.
+The binary has no shop name, price, printer IP or currency in it. `fixtures/warkop3dara.seed.json`
+is the reference tenant used by the tests and as the first real deployment.
 
 ## Rules the code is built around
 
-- Money is always integer rupiah (`src/money.rs`) — no floats anywhere near money.
-- Stock balance is never stored: it is `SUM(stock_moves.qty)`.
-- Only raw materials (and paid add-ons) are stock-tracked — menu items are not.
-- Cash reconciliation is typed by the cashier; `counted` is never auto-filled from `expected`.
-- Printing failures never block a sale, and every print attempt is logged.
-
-`seed` leaves existing rows alone so a price edited in the POS is not silently reverted;
-`seed --force` re-reads the catalogue when the source really changed.
+- Money is an integer in the currency's minor unit (`src/money.rs`) — no floats near money.
+- A stock balance is never stored; it is `SUM(stock_moves.qty)`.
+- Only ingredients (and paid add-ons with a recipe) are stock-tracked; menu items are not.
+- Sales are voided, never deleted: status + reversing moves, invoice numbers never reused.
+- One open shift per cashier, enforced by a unique index in the database.
+- Print failures never block a sale, and every attempt is logged.
 
 ## Status
 
-Step 1–2 of 12 (schema + migrate + seed) are done and verified. See `AGENTS.md` §0 for the
-full ordered plan, the open decisions, and the till UX rules.
+Schema, migrate and catalog import (steps 1–2 of the plan) are done and verified on Windows
+and Linux (WSL Ubuntu 24.04): `cargo test` green, `clippy -D warnings` clean, and a real
+`migrate → import → check` run against a fresh database.
 
-`AGENTS.md` is written in Indonesian (internal ops doc); code, comments, commits and this file
-are English. The business reference implementation (the old ERPNext system) lives in the
-sibling repo `warkop3dara.id` and is never part of this build.
-
-## License
-
-AGPL-3.0-or-later.
+Next: PIN/shift opening, then the till grid and payment. See `AGENTS.md` for the ordered plan,
+the till UX rules and the open decisions.

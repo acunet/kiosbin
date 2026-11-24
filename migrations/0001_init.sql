@@ -1,36 +1,42 @@
--- 0001_init.sql — Warkop 3Dara POS (RustPOS) initial schema.
+-- 0001_init.sql — RustPOS initial schema.
 --
--- Rules that the schema itself enforces:
---   * money is INTEGER rupiah — never REAL (docs/ASSESSMENT §6.8 of the old repo)
---   * quantities are REAL only for ingredients weighed/counted in Gram / Ml
---   * stock balance is never stored — it is SUM(stock_moves.qty)
---   * a sale is voided by status + reversing moves, never deleted
+-- Product rules the schema itself enforces:
+--   * money is an INTEGER in the currency's minor unit (rupiah: 1 = Rp 1) — never REAL
+--   * quantities are REAL, and only for ingredients weighed/counted (Gram / Ml)
+--   * a stock balance is never stored — it is SUM(stock_moves.qty)
+--   * a sale is voided with status + reversing moves, never deleted
+--   * one open shift per cashier, enforced by the database
 
 CREATE TABLE users (
     id       INTEGER PRIMARY KEY,
     name     TEXT    NOT NULL UNIQUE,
     pin_salt TEXT    NOT NULL,
     pin_hash TEXT    NOT NULL,
-    role     TEXT    NOT NULL CHECK (role IN ('kasir', 'owner')),
+    role     TEXT    NOT NULL CHECK (role IN ('cashier', 'owner')),
     active   INTEGER NOT NULL DEFAULT 1
 );
 
+-- Catalog. `kind` drives behaviour:
+--   menu    — sold at the till, not stock tracked
+--   addon   — sold as its own line under a parent line, stock tracked if it has a recipe
+--   raw     — ingredient only; the stock ledger is built for these
+--   service — sold at the till, no stock, may issue a voucher
 CREATE TABLE items (
     id         INTEGER PRIMARY KEY,
     code       TEXT    NOT NULL UNIQUE,
     name       TEXT    NOT NULL,
     group_name TEXT    NOT NULL DEFAULT '',
-    price      INTEGER NOT NULL DEFAULT 0,  -- rupiah; 0 = till must ask for a price
+    price      INTEGER NOT NULL DEFAULT 0,  -- minor units; 0 = the till must ask for a price
     uom        TEXT    NOT NULL DEFAULT 'Portion',
     kind       TEXT    NOT NULL CHECK (kind IN ('menu', 'addon', 'raw', 'service')),
     active     INTEGER NOT NULL DEFAULT 1,
-    cost       INTEGER NOT NULL DEFAULT 0,  -- HPP per unit; 0 = not filled in yet
-    -- MikroTik hotspot voucher config (carried over from the ERPNext item custom fields).
-    -- hotspot_enabled = 1 turns the item into "this sale issues a voucher".
-    hotspot_enabled          INTEGER NOT NULL DEFAULT 0,
-    mikrotik_profile         TEXT,
-    hotspot_duration_minutes INTEGER,
-    hotspot_validity_minutes INTEGER
+    cost       INTEGER NOT NULL DEFAULT 0,  -- cost per unit; 0 = not filled in yet
+    -- Optional voucher behaviour for service items (WiFi/access vouchers sold at the till):
+    -- voucher_enabled = 1 means "selling this item issues one voucher per unit".
+    voucher_enabled          INTEGER NOT NULL DEFAULT 0,
+    voucher_profile          TEXT,
+    voucher_duration_minutes INTEGER,
+    voucher_validity_minutes INTEGER
 );
 
 CREATE INDEX idx_items_kind ON items (kind);
@@ -54,27 +60,26 @@ CREATE TABLE recipes (
 CREATE TABLE shifts (
     id            INTEGER PRIMARY KEY,
     cashier       TEXT    NOT NULL,
-    opened_at     TEXT    NOT NULL DEFAULT (datetime('now', 'localtime')),
+    opened_at     TEXT    NOT NULL,
     closed_at     TEXT,
     opening_float INTEGER NOT NULL DEFAULT 0,
     status        TEXT    NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed'))
 );
 
--- One open shift per cashier (double-open guard still holds without the app running).
 CREATE UNIQUE INDEX idx_shifts_one_open ON shifts (cashier) WHERE status = 'open';
 
 CREATE TABLE sales (
-    id          INTEGER PRIMARY KEY,
-    number      TEXT    NOT NULL UNIQUE,  -- W3D-YYYYMMDD-NNN
-    shift_id    INTEGER NOT NULL REFERENCES shifts (id),
-    cashier     TEXT    NOT NULL,
-    at          TEXT    NOT NULL DEFAULT (datetime('now', 'localtime')),
-    subtotal    INTEGER NOT NULL,
-    discount    INTEGER NOT NULL DEFAULT 0,
-    total       INTEGER NOT NULL,
-    status      TEXT    NOT NULL DEFAULT 'paid' CHECK (status IN ('paid', 'void')),
-    legacy_ref  TEXT,  -- ACC-SINV-… from ERPNext, kept for the parallel-run period
-    deducted_at TEXT   -- set when this sale's stock_moves were written (idempotency stamp)
+    id           INTEGER PRIMARY KEY,
+    number       TEXT    NOT NULL UNIQUE,  -- <invoice_prefix>-YYYYMMDD-NNN
+    shift_id     INTEGER NOT NULL REFERENCES shifts (id),
+    cashier      TEXT    NOT NULL,
+    at           TEXT    NOT NULL,
+    subtotal     INTEGER NOT NULL,
+    discount     INTEGER NOT NULL DEFAULT 0,
+    total        INTEGER NOT NULL,
+    status       TEXT    NOT NULL DEFAULT 'paid' CHECK (status IN ('paid', 'void')),
+    external_ref TEXT,  -- document number in a system this one replaced (import/migration)
+    deducted_at  TEXT   -- set when this sale's stock_moves were written (idempotency stamp)
 );
 
 CREATE INDEX idx_sales_at ON sales (at);
@@ -97,7 +102,7 @@ CREATE INDEX idx_sale_lines_sale ON sale_lines (sale_id);
 CREATE TABLE payments (
     id       INTEGER PRIMARY KEY,
     sale_id  INTEGER NOT NULL REFERENCES sales (id),
-    method   TEXT    NOT NULL,  -- Cash | QRIS, from settings.payment_methods
+    method   TEXT    NOT NULL,  -- from settings.payment_methods
     amount   INTEGER NOT NULL,
     received INTEGER,           -- cash only
     change   INTEGER            -- cash only
@@ -117,13 +122,13 @@ CREATE TABLE shift_counts (
 CREATE TABLE stock_moves (
     id      INTEGER PRIMARY KEY,
     item_id INTEGER NOT NULL REFERENCES items (id),
-    qty     REAL    NOT NULL,  -- + in / - out; the balance is SUM(qty), never a column
+    qty     REAL    NOT NULL,  -- + in / - out; balance is SUM(qty), never a column
     reason  TEXT    NOT NULL CHECK (
         reason IN ('opening', 'sale', 'void', 'opname', 'purchase', 'waste', 'return')
     ),
     ref     TEXT,
     cost    INTEGER NOT NULL DEFAULT 0,
-    at      TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
+    at      TEXT    NOT NULL
 );
 
 CREATE INDEX idx_stock_moves_item ON stock_moves (item_id);
@@ -135,20 +140,20 @@ CREATE TABLE vouchers (
     item_id          INTEGER NOT NULL REFERENCES items (id),
     code             TEXT    NOT NULL,
     password         TEXT    NOT NULL,
-    profile          TEXT,
+    voucher_profile  TEXT,
     duration_minutes INTEGER,
     validity_minutes INTEGER,
     status           TEXT    NOT NULL DEFAULT 'provisioned'
         CHECK (status IN ('provisioned', 'failed', 'printed')),
-    router_ref       TEXT,
-    created_at       TEXT    NOT NULL DEFAULT (datetime('now', 'localtime')),
+    provider_ref     TEXT,  -- id returned by whatever provisioned the voucher
+    created_at       TEXT    NOT NULL,
     printed_at       TEXT
 );
 
 CREATE INDEX idx_vouchers_sale ON vouchers (sale_id);
 
--- Monthly aggregates imported from ERPNext so old revenue stays reportable without
--- carrying the old invoice schema around.
+-- Monthly aggregates imported from a system this one replaced, so old revenue stays
+-- reportable without carrying that system's invoice schema around.
 CREATE TABLE legacy_totals (
     period   TEXT    PRIMARY KEY,  -- YYYY-MM
     invoices INTEGER NOT NULL,

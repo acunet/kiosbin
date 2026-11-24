@@ -1,53 +1,59 @@
-# AGENTS.md — Warkop 3Dara POS (RustPOS)
+# AGENTS.md — RustPOS
 
-> **Cara pakai:** baca sampai habis sebelum menulis kode. Aturan §6 (uang), §7 (stok), dan §10
-> (cetak) tidak boleh dilanggar tanpa alasan tertulis di commit message.
-> Bahasa: **kode, README, commit message = Inggris. Dokumen ops (file ini, `docs/`) = Indonesia.
-> UI kasir & struk = Indonesia** (kasir dan pelanggannya orang Indonesia).
+> **Cara pakai:** baca sampai habis sebelum menulis kode. Aturan §6 (uang), §7 (stok), §9 (UX
+> kasir) tidak boleh dilanggar tanpa alasan tertulis di commit message.
+> **Bahasa:** kode, README, commit message = Inggris. Dokumen ops (file ini, `docs/`) = Indonesia.
+> UI kasir & struk = Indonesia (pasar pertama), string dipisah supaya bisa diterjemahkan.
+> `docs/DECISIONS.md` = keputusan yang sudah dikunci; jangan didebat ulang tanpa alasan baru.
 
-Repo ini adalah pengganti stack Frappe v15 + ERPNext v15 + POSNext untuk **satu warkop, satu
-outlet, satu–dua tablet**. ERPNext penuh (accounting, payroll, MRP, 113 endpoint, ±23k LOC Python
-+ ±60k LOC frontend) tidak sebanding untuk **3–11 transaksi/hari**.
-
-Repo `warkop3dara.id` (Python/ERPNext) = **acuan data & perilaku**, bukan bagian dari build.
-Jangan menambahkan dependensi runtime ke sana.
+RustPOS adalah **produk**: POS self-hosted untuk warung/kafe/retail kecil, satu binary, satu file
+SQLite, tanpa cloud. Warkop 3Dara adalah **tenant uji pertama** (fixture + data referensi), bukan
+bagian dari kode. Jangan pernah menaruh nama toko, harga, IP printer, atau mata uang di dalam kode —
+semua itu datang dari fixture (§5).
 
 ---
 
-## 0. Status sekarang
+## 0. Status
 
 | Sudah jalan | Belum |
 |---|---|
-| `migrate` (skema 13 tabel), `seed` (39 item + 44 bahan + 70 baris resep), `check`, 9 tes hijau | Halaman kasir, bayar, struk, shift, laporan, voucher, master-data UI |
+| `migrate` (13 tabel), `import` (fixture → katalog), `check`, 13 tes hijau di Windows **dan** WSL Linux | Halaman kasir, bayar, struk, shift, laporan, voucher, layar master data |
 
-`cargo test` = 9/9 (3 unit uang + 6 integrasi). Semua langkah berikut = satu commit sendiri,
-jangan menulis 4 lapis sekaligus lalu debug bersama.
+Urutan langkah (satu commit per langkah, jangan lompat):
 
-**Urutan yang sudah disepakati** (`docs/ASSESSMENT.md` §9):
-migrate → seed → **opname awal** → buka shift/PIN → grid+cart → bayar cash/QRIS + potong stok →
-struk + tes printer → tutup shift/EOD → laporan+CSV → voucher hotspot → master data → systemd +
-backup → paralel dengan ERPNext 1 minggu → fase 2 (pembelian/HPP).
+1. ✅ skema + migrate
+2. ✅ impor katalog dari fixture
+3. opname stok awal (44 bahan tenant pertama) — disalin dari hitungan fisik owner
+4. PIN kasir + halaman Buka Shift
+5. grid menu + cart (HTMX partial), cek visual dulu
+6. bayar cash + QRIS + simpan nota + potong stok dalam **satu transaksi DB**
+7. struk thermal + tombol Tes Printer → **cetak kertas nyata** sebelum lanjut
+8. tutup shift + EOD
+9. laporan + CSV (owner lihat dari HP)
+10. voucher (kalau O3 dijawab ya)
+11. master data (impor CSV / layar Menu & Harga) — wajib sebelum dipakai harian
+12. `serve` + systemd + backup harian + paket rilis (O6)
 
 ---
 
-## 1. Stack
+## 1. Stack & bentuk repo
 
 | Layer | Pilihan | Alasan |
 |---|---|---|
 | Bahasa | Rust (edition 2021, stable) | satu binary, tidak ada dependency hell |
 | Web | `axum` + `tokio` | router + handler, cukup |
-| DB | **SQLite** (`sqlx`, WAL) — satu file | backup = copy file |
+| DB | **SQLite** (`sqlx`, WAL) | satu file; backup = copy; tanpa administrasi DB |
 | Frontend | **HTMX + Askama** (server-rendered) | nol npm, nol build step, nol stale bundle |
-| Sesi | cookie + PIN kasir | tidak perlu email/OAuth |
-| Cetak | ESC/POS raw via `TcpStream` ke `settings.printer_host:printer_port` | sudah terbukti di POS lama |
-| QRIS | gambar statis milik warung | tanpa payment gateway |
+| Cetak | ESC/POS raw via `TcpStream` | sudah terbukti di sistem lama |
 
-Crate yang sudah dipakai: `sqlx 0.9` (runtime-tokio/sqlite/migrate), `tokio 1`, `serde`, `serde_json`.
-Yang akan ditambah di langkah web: `axum 0.8`, `askama`, `tower-sessions` — **jangan tambah
-dependensi lain tanpa alasan**; kalau ragu, tulis dulu kenapa di commit message.
+**Satu repo, satu binary** (`docs/DECISIONS.md` D1): UI adalah template yang di-compile ke binary,
+jadi tidak ada frontend terpisah, tidak ada API yang harus di-version-kan, tidak ada CORS, tidak ada
+bundel JS basi, dan yang dipasang di PC toko cuma satu file. Kalau nanti butuh klien native/WASM,
+batas HTTP itu sudah jadi garis pemisahnya.
 
-**Kenapa HTMX, bukan SPA:** server ada di tempat (PC lokal), jadi "offline" tidak perlu service
-worker/IndexedDB. PWA + IndexedDB = sumber bug blank screen/stale bundle di sistem lama.
+Sudah dipakai: `sqlx 0.9` (runtime-tokio/sqlite/migrate), `tokio 1`, `serde`, `serde_json`. Langkah
+web akan menambah `axum 0.8`, `askama`, `tower-sessions`. **Jangan tambah dependensi lain** tanpa
+alasan di commit message — ini produk yang harus gampang di-audit saat dijual.
 
 ---
 
@@ -55,114 +61,116 @@ worker/IndexedDB. PWA + IndexedDB = sumber bug blank screen/stale bundle di sist
 
 ```
 RustPOS/
-├── AGENTS.md                 # file ini
-├── Cargo.toml · migrations/ · seed/warkop_seed.json
-├── docs/ASSESSMENT.md        # hasil assessment scope (acuan keputusan)
-├── src/
-│   ├── main.rs               # CLI: migrate | seed | check  (nanti: serve)
-│   ├── lib.rs · db.rs        # pool + migrate (WAL, foreign_keys ON, busy_timeout 5s)
-│   ├── money.rs              # Rupiah = i64; format & parse
-│   └── seed.rs               # impor katalog dari snapshot ERPNext
-├── tests/lifecycle.rs        # migrasi, constraint, idempotensi seed
-└── ops/                      # (belum) systemd unit, backup.sh, reconcile_vs_erpnext.sh
+├── AGENTS.md · README.md · docs/ (DECISIONS.md, PRODUCT.md, tenants/)
+├── Cargo.toml · migrations/ · fixtures/*.seed.json
+├── src/  main.rs (CLI) · db.rs (pool, migrate, clock) · money.rs · import.rs
+├── tests/lifecycle.rs
+└── ops/  (belum) systemd unit, backup.sh
 ```
 
-`warkop.db` (dan `-wal`/`-shm`) **jangan pernah** di-commit — sudah ada di `.gitignore`.
+`rustpos.db` (+ `-wal`/`-shm`) tidak pernah di-commit. Migrasi yang sudah dipakai di produksi tidak
+diedit — tambah file baru.
 
 ---
 
-## 3. Skema & aturan turunan
+## 3. Invarian produk
 
-Skema hidup di `migrations/*.sql` (jangan diedit setelah dipakai di produksi — tambah file baru).
-Ringkas: `items` (+ `uom`/`kind`/`hotspot_*`) · `recipes` · `uom_conversions` · `stock_moves` ·
-`shifts` · `sales` · `sale_lines` · `payments` · `shift_counts` · `vouchers` · `legacy_totals` ·
-`users` · `settings`.
-
-- **Saldo stok = `SUM(stock_moves.qty)`.** Tidak ada kolom `stock`/`actual_qty`. Satu-satunya cara
-  saldo jadi salah adalah menulis saldo.
-- `kind`: `menu` | `addon` | `raw` | `service`. Hanya `raw` (+ `addon`) yang punya ledger.
-  Menu **tidak** dilacak sebagai stok — di sistem lama menu `is_stock_item=1` dan itu sumber
-  `tabBin` negatif yang tidak pernah dipakai siapa pun.
-- `price = 0` = kasir **wajib** memasukkan harga (mis. `MN-KOPI-07` Max Tea Tarik). Jangan pernah
-  menjual Rp 0 diam-diam.
-- Satu kasir hanya boleh punya satu shift `open` — dijaga partial unique index, bukan cuma kode.
-- Nomor nota: `W3D-YYYYMMDD-NNN`, urut per hari, dibuat **di dalam transaksi DB yang sama** dengan
-  insert `sales`. Jangan `MAX()+1` di luar transaksi.
-- `sales.legacy_ref` = nomor `ACC-SINV-…` lama, dipakai saat masa paralel.
+- `kind`: `menu` | `addon` | `raw` | `service`. `raw` + `addon` (yang punya resep) punya ledger;
+  `menu` tidak (`DECISIONS.md` D9).
+- `price = 0` = kasir **wajib** memasukkan harga; jangan pernah menjual 0 diam-diam.
+- Fixture yang mendefinisikan `kind` menang; `infer_kind()` hanya fallback untuk file yang ditulis
+  tangan (D5).
+- Impor bersifat **menambah**: baris dan setting yang sudah ada tidak ditimpa; `--force` untuk
+  sengaja me-refresh katalog (D6).
+- Resep menunjuk bahan tidak dikenal → **gagal keras + rollback** (D7).
 
 ---
 
 ## 4. Perintah kerja
 
+Windows (git-bash) — untuk iterasi cepat:
+
 ```bash
-export PATH="$HOME/.cargo/bin:$PATH"      # git-bash Windows
-cargo run -- migrate                      # buat/upgrade warkop.db
-cargo run -- seed seed/warkop_seed.json   # impor katalog (idempoten)
-cargo run -- check                        # jumlah per kind, resep, saldo ≤ 0, item tanpa harga
-cargo test                                # 9 tes
+export PATH="$HOME/.cargo/bin:$PATH"
+cargo run -- migrate
+cargo run -- import fixtures/warkop3dara.seed.json
+cargo run -- check
+cargo test
 cargo fmt && cargo clippy --all-targets -- -D warnings
 ```
 
-Output nyata yang diharapkan:
+WSL Ubuntu 24.04 — untuk verifikasi Linux-native (target produksi). Target dir diletakkan di ext4,
+bukan di `/mnt/c`, supaya kompilasi tidak lambat:
+
+```bash
+wslrun 'export PATH="$HOME/.cargo/bin:$PATH"; cd /mnt/c/Users/mansu/dev/RustPOS; \
+        CARGO_TARGET_DIR=$HOME/.cache/rustpos-target cargo test'
+```
+
+Output yang diharapkan:
 
 ```text
-migrate: ok  db=warkop.db  migrations=migrations
-seed: ok  items written=83 kept=0  recipe lines=70  uom conversions added=4  settings added=8
-seed: ok  items written=0 kept=83  recipe lines=0  uom conversions added=0  settings added=0
+migrate: ok  db=rustpos.db  migrations=migrations
+import: ok  items written=83 kept=0  recipe lines=70  uom conversions added=4  settings added=14
+import: ok  items written=0 kept=83  recipe lines=0  uom conversions added=0  settings added=0
+outlet = Warkop 3Dara   currency = IDR Rp   invoice prefix = W3D   paper = 48 cols
 items[addon] = 6 · items[menu] = 32 · items[raw] = 44 · items[service] = 1 · recipes = 70
 ```
 
-`--db PATH` atau env `WARKOP_DB` untuk database lain (dipakai tes).
+`--db PATH` atau env `RUSTPOS_DB` untuk database lain (dipakai tes).
 
 ---
 
-## 5. Master data (Desk ERPNext tidak ada lagi)
+## 5. Tenant & fixture (cara onboard toko baru)
 
-- `seed` **tidak pernah menimpa** baris yang sudah ada → harga yang diubah owner tidak akan
-  dikembalikan diam-diam oleh re-run.
-- `seed --force` = re-read kolom katalog (`name`, `group_name`, `price`, `uom`, `kind`, `active`)
-  dan qty resep. Pakai hanya saat katalog di sumber memang berubah.
-- Resep yang menunjuk bahan tidak dikenal → **gagal keras, seluruh impor di-rollback**. Jangan
-  "lewati saja" (`docs/ASSESSMENT.md` §7 no.6).
-- Perubahan menu harian: langkah berikutnya adalah impor CSV / halaman "Menu & Harga".
-  Sampai itu ada, ubah harga = `sqlite3`/`--force` — dan itu **belum layak** untuk owner. Lihat §14.
+Satu file JSON = satu toko: `outlet` (nama, mata uang, symbol, desimal, prefix nota, kolom kertas),
+`payment_methods` (+ `kind`: cash/qris), `printing`, `uom_conversions`, `items`, `raw_materials`.
+Semua opsional kecuali `items`; yang kosong jatuh ke default produk (`My Outlet`, IDR, `POS`).
+
+```bash
+cargo run -- migrate
+cargo run -- import fixtures/<toko>.seed.json
+```
+
+Aturan: **jangan** hard-code apa pun dari fixture ke dalam kode, dan **jangan** mengedit fixture
+tenant pertama untuk kebutuhan tenant lain — buat file baru.
 
 ---
 
 ## 6. Aturan uang (WAJIB)
 
-1. **Uang selalu `i64` rupiah.** Tidak ada `f64` di jalur uang. Format & parse lewat `money.rs`.
-2. Pembulatan ke rupiah penuh **saat hitung**, bukan saat simpan.
-3. **Jangan auto-isi `counted` dari `expected`.** Kasir wajib mengetik angka fisik. (Di sistem lama
+1. Uang selalu integer di **minor unit** mata uang (`money.rs`). Tidak ada `f64` di jalur uang.
+2. Pembulatan ke unit terkecil **saat hitung**, bukan saat simpan.
+3. **Jangan auto-isi `counted` dari `expected`** — kasir wajib mengetik angka fisik. (Di sistem lama
    16 dari 20 shift mengetik `0` → tampak seperti kas kurang.)
-4. `expected` cash = `opening_float + penjualan cash`. **QRIS tidak menambah expected cash.**
-   Hitung ulang dari ledger tiap kali (idempoten), jangan disimpan lalu ditambah-tambah.
-5. QRIS `counted` = angka settlement/cek mutasi, diisi manual. Jangan menyimpulkan "QRIS kurang"
-   dari nominal yang diketik kasir di kolom pembayaran.
-6. Kas keluar / belanja laci: **tidak dibangun** (0 pemakaian dari 97 shift). Bukan "pending".
-7. Diskon: nominal + persen di level nota. Add-on berbayar = **baris sendiri** (punya resep/stok),
-   catatan dapur = teks. Jangan pernah menaikkan harga baris induk untuk menutupi add-on.
-8. Void = `status='void'` + `stock_moves` pembalik. Jangan `DELETE`, nomor nota tidak boleh dipakai
-   ulang.
+4. `expected` cash = `opening_float + penjualan cash`. QRIS **tidak** menambah expected cash.
+   Hitung ulang dari ledger setiap kali (idempoten), jangan disimpan lalu ditambah-tambah.
+5. QRIS `counted` = angka settlement, diisi manual. Jangan menyimpulkan "QRIS kurang" dari nominal
+   yang diketik kasir.
+6. Diskon: nominal + persen di level nota. Add-on berbayar = **baris sendiri**, catatan = teks.
+   Jangan menaikkan harga baris induk untuk menutupi add-on.
+7. Void = `status='void'` + `stock_moves` pembalik. Jangan `DELETE`; nomor nota tidak dipakai ulang.
+8. Kas keluar/belanja laci **tidak** dibangun (0 pemakaian dari 97 shift pada tenant pertama).
+   Kalau nanti ada toko yang butuh: itu fitur baru dengan desain sendiri, bukan kolom kosong.
 
 ---
 
 ## 7. Aturan stok (WAJIB)
 
-1. **Opname awal dulu.** Baseline prod sekarang rusak (17 baris `tabBin` negatif, 14 bahan `BB-*`
-   ≤ 0). Sebelum transaksi pertama: isi saldo fisik 44 bahan dengan `reason='opening'` dan tanggal
-   cutover di `ref`. Jangan mengimpor saldo ERPNext apa adanya.
-2. Ledger hanya mencatat **bahan** (`raw`) dan `addon`. Menu & service tidak.
-3. Satu penjualan = **satu set** `stock_moves` (satu baris per bahan resep × qty terjual).
-   `sales.deducted_at` di-set pada transaksi yang sama → pemicu ulang (retry/replay) tidak dobel.
-4. Konversi UOM: `uom_conversions` hanya menyimpan pasangan non-trivial (Kg→Gram 1000,
-   Liter→Ml 1000, Box→Pcs 24, Carton→Pack 12). `from = to` = faktor 1. Ledger **selalu** dalam base
-   UOM bahan (`Gram`, `Ml`, `Pcs`); konversi hanya di batas input/output.
-5. Stok negatif: kebijakan belum diputuskan owner (§14 no.4). Selama belum diputuskan: **izinkan
-   tapi tandai** di UI + laporan; jangan diam-diam memblokir penjualan.
-6. Opname koreksi: `reason='opname'` + catatan. Waste (`reason='waste'`) baru dipakai kalau owner
-   bilang Waste Log dipakai (§14 no.5).
-7. HPP: `items.cost = 0` berarti belum diisi. Laporan laba **wajib** menampilkan "HPP belum diisi",
+1. **Saldo = `SUM(stock_moves.qty)`.** Tidak ada kolom saldo. Satu-satunya cara saldo jadi salah
+   adalah menulis saldo.
+2. Langkah 3 = **opname awal** per tenant (`reason='opening'`, tanggal cutover di `ref`). Jangan
+   mengimpor saldo dari sistem lama apa adanya — baseline tenant pertama sudah rusak (17 baris
+   negatif, 14 bahan ≤ 0).
+3. Satu penjualan = satu set `stock_moves` (per bahan resep × qty), ditulis di transaksi yang sama
+   dengan nota; `sales.deducted_at` di-set di situ → retry/replay tidak dobel.
+4. Konversi UOM datang dari fixture; `from = to` = faktor 1. Ledger **selalu** dalam base UOM bahan
+   (`Gram`/`Ml`/`Pcs`); konversi hanya di batas input/output.
+5. Stok negatif: **izinkan tapi tandai** sampai O4 dijawab owner/tenant; jangan diam-diam memblokir
+   penjualan.
+6. Opname koreksi = `reason='opname'` + catatan. `waste` dipakai kalau tenant memang mencatat bahan
+   terbuang.
+7. HPP: `items.cost = 0` berarti belum diisi. Laporan laba **wajib** bilang "HPP belum diisi",
    jangan pernah menampilkan laba 100%.
 
 ---
@@ -170,75 +178,65 @@ items[addon] = 6 · items[menu] = 32 · items[raw] = 44 · items[service] = 1 ·
 ## 8. Alur kasir (definition of v1)
 
 1. Buka Shift: pilih kasir + PIN, isi modal awal.
-2. Kasir: grid menu per grup, cari nama/kode, tap → cart kanan. `+ / −`, hapus, add-on, catatan.
-3. Bayar: Cash (keypad nominal + kembalian) atau QRIS (gambar QR + tombol "Sudah Bayar").
-4. Simpan → struk tercetak (gagal cetak ≠ gagal transaksi; ada tombol cetak ulang) → cart kosong.
+2. Kasir: grid menu per grup, cari kode/nama, tap → cart. `+ / −`, hapus, add-on, catatan.
+3. Bayar: Cash (keypad + kembalian) atau QRIS (gambar statis + tombol "Sudah Bayar").
+4. Simpan → struk tercetak (gagal cetak ≠ gagal transaksi; ada cetak ulang) → cart kosong.
 5. Tutup Shift: per metode `opening / penjualan / counted / selisih`, cetak EOD.
-6. Laporan owner: harian, menu terjual, kas per shift, stok, CSV — bisa dibuka dari HP.
+6. Laporan owner: harian, menu terjual, kas per shift, stok, CSV.
 
-**v1 selesai bila:** satu shift penuh bisa dijalankan dan **jumlah uang fisik di laci = `counted`**.
+**v1 selesai bila:** satu shift penuh bisa dijalankan dan **uang fisik di laci = `counted`**.
 
 ---
 
 ## 9. Aturan kenyamanan & kecepatan kasir
 
-Ini bukan hiasan — setiap poin di bawah pernah jadi keluhan nyata atau dihindari sejak awal.
-
-1. **Keyboard-first.** Setelah PIN, fokus langsung ke kolom cari. `Enter` = tambah item pertama
-   hasil cari, `F2` = bayar, `Esc` = tutup dialog, `+/-` = qty, `Del` = hapus baris. Kasir warkop
-   tidak selalu pakai mouse.
-2. **Kode menu dipertahankan** (`MN-KOPI-03`). Kasir lama hafal kode; pencarian harus match kode,
-   nama, **dan** alias yang bisa diisi owner.
-3. **Target sentuh ≥ 48 px**, grid 3–4 kolom di tablet 10", tombol bayar besar, tanpa animasi berat.
-4. **Kirim katalog sekali.** 39 item + harga = beberapa KB: sematkan sebagai JSON di halaman kasir
-   supaya grid muncul instan tanpa round-trip; refresh hanya saat `settings.catalog_version`
+1. **Keyboard-first.** Setelah PIN, fokus ke kolom cari. `Enter` = tambah hasil pertama, `F2` bayar,
+   `Esc` tutup dialog, `+/-` qty, `Del` hapus baris.
+2. **Kode item dipertahankan** dan dicari bareng nama + alias yang bisa diisi owner.
+3. **Target sentuh ≥ 48 px**, grid 3–4 kolom di tablet 10", tanpa animasi berat.
+4. **Kirim katalog sekali** per sesi (beberapa KB): grid render instan, refresh hanya kalau katalog
    berubah.
-5. **Latency budget:** dari tap item sampai cart berubah **< 100 ms** di LAN; dari tap "Bayar"
-   sampai struk mulai keluar **≤ 2 s**. Ukur dari log durasi handler, bukan feeling.
-6. **Jangan ada spinner di jalur bayar.** Tombol bayar idempoten (anti dobel nota): disable +
-   token sekali-pakai dari server.
-7. **Keypad nominal cepat**: 5k/10k/20k/50k/100k/uang pas + backspace; kembalian dihitung realtime
-   saat mengetik. Jangan paksa kasir mengetik `30000` untuk tagihan Rp 26.000.
-8. **Satu nota per layar di v1.** Jangan bikin multi-nota/tab paralel — di sistem lama itu sumber
-   bug sinkronisasi cart.
-9. **Printer selalu kelihatan:** badge status cetak + tombol **Tes Printer** dan **Cetak Ulang**
-   di header kasir, bukan di halaman settings yang jarang dibuka. Cetak gagal → masuk log + badge.
-10. **Struk & EOD satu renderer**: satu fungsi menghasilkan byte ESC/POS *dan* HTML untuk layar/cetak
-    ulang dari data yang sama (di sistem lama layout ada dua tempat dan sudah pernah beda isi).
-11. **Tutup shift: angka besar, sekali lihat.** `opening / penjualan cash / penjualan QRIS /
-    counted / selisih`, tombol hitung cepat, dan **tanpa auto-isi** (§6.3).
-12. **Nomor nota setelah bayar ditampilkan besar** (kasir membacakan/menulis), plus tombol cetak ulang.
-13. **Laporan ramah HP** dan angkanya sama persis dengan EOD. Owner memeriksa dari rumah.
-14. **Jangan taruh fitur non-kasir di layar kasir.** Tidak ada settings, tidak ada laporan,
-    tidak ada riwayat panjang di jalur jualan.
-15. **Tablet:** mode kiosk (fullscreen) + setel tablet "jangan tidur" saat shift. Jangan andalkan
-    `WakeLock`/service worker — butuh secure context (HTTPS) yang tidak kita punya di LAN.
-16. **Fault isolation:** printer mati, WiFi kedip, router rebooting → nota **tetap** tersimpan di
-    server lokal. Tidak ada alur yang membatalkan penjualan karena alat.
+5. **Budget latency:** tap item → cart < 100 ms di LAN; tap Bayar → struk mulai keluar ≤ 2 s. Ukur
+   dari log durasi handler, bukan feeling.
+6. **Nol spinner di jalur bayar**; tombol bayar idempoten (token sekali-pakai + disable) supaya klik
+   dobel tetap satu nota.
+7. **Keypad nominal cepat** (5k/10k/20k/50k/100k/uang pas) + backspace, kembalian realtime.
+8. **Satu nota per layar** di v1; multi-nota paralel = sumber bug sinkronisasi cart.
+9. **Printer selalu kelihatan:** badge status cetak + tombol **Tes Printer** & **Cetak Ulang** di
+   header kasir, bukan di halaman settings.
+10. **Satu renderer struk** yang mengeluarkan byte ESC/POS *dan* HTML dari data yang sama.
+11. **Tutup shift: angka besar, sekali lihat**, tanpa auto-isi `counted`.
+12. **Nomor nota tampil besar** setelah bayar + tombol cetak ulang.
+13. **Laporan ramah HP**, angkanya sama dengan EOD.
+14. **Jangan taruh fitur non-kasir di layar kasir.**
+15. **Tablet:** mode kiosk + setelan "jangan tidur" saat shift. Jangan andalkan `WakeLock`/service
+    worker — butuh HTTPS di LAN yang tidak kita punya.
+16. **Fault isolation:** printer mati, WiFi kedip, router reboot → nota tetap tersimpan di server
+    lokal. Tidak ada alur yang membatalkan penjualan karena alat.
 
 ---
 
 ## 10. Cetak
 
-- Target: `settings.printer_host` + `settings.printer_port` (default `192.168.1.254:9100` — IP
-  MikroTik dengan NAT port 9100 ke printer; disengaja karena colokan modem habis).
-- Lebar kertas: `settings.paper_cols` (48 = 80 mm, 32 = 58 mm). **Belum dikonfirmasi** mana yang
-  terpasang (§14 no.6) — jangan hard-code di luar `print/`.
-- Tes Printer **wajib** ada, hasilnya ditampilkan (OK / timeout / refused). Timeout = masalah
-  NAT/printer, **bukan** kode POS.
-- Setiap kegagalan cetak ditulis ke log + badge UI. "Tersimpan" ≠ "bisa cetak".
+- Target dari `settings.printer_host` / `printer_port`. Contoh tenant pertama:
+  `192.168.1.254:9100` (IP router dengan NAT ke printer — disengaja karena colokan modem habis).
+  Di RustPOS ini TCP biasa; POS tidak perlu tahu ada NAT.
+- Lebar kertas dari `settings.paper_cols` (48 = 80 mm, 32 = 58 mm). Jangan hard-code di luar modul
+  `print/`. Mana yang terpasang = O2.
+- Tes Printer **wajib** ada dan hasilnya ditampilkan (OK / timeout / refused). Timeout = masalah
+  NAT/printer, bukan kode. Setiap gagal cetak masuk log + badge.
+- "Tersimpan" ≠ "bisa cetak".
 
 ---
 
-## 11. Voucher hotspot MikroTik (keputusan owner masih terbuka)
+## 11. Voucher (layanan WiFi/akses)
 
-Fakta dari sistem lama: item `MN-HOTSPOT-2JAM` (kind `service`) dijual di POS → `on_submit` menerbitkan
-voucher ke RouterOS → kode voucher dicetak di blok **VOUCHER HOTSPOT** di struk. Konfigurasi per item:
-`items.hotspot_enabled`, `mikrotik_profile`, `hotspot_duration_minutes`, `hotspot_validity_minutes`.
-Kredensial router = setting, **jangan pernah** masuk kode/log/commit.
-
-Sampai owner memutuskan (§14 no.1): kolom `hotspot_*` tinggal 0/NULL dan tabel `vouchers` kosong.
-Jangan mengisi kredensial, jangan memanggil router.
+Item `service` dengan `items.voucher_enabled = 1` menerbitkan voucher per unit; kode tercetak di
+blok voucher pada struk. Kolom generik: `voucher_profile`, `voucher_duration_minutes`,
+`voucher_validity_minutes`; hasil provisioning disimpan di `vouchers` (`provider_ref` = id dari
+provider). **Provider-nya bukan bagian dari core**: MikroTik/RouterOS adalah salah satu provider.
+Kredensial provider = setting, tidak pernah masuk kode/log/commit. Sampai O3 dijawab, tabel
+`vouchers` dibiarkan kosong dan tidak ada panggilan ke perangkat apa pun.
 
 ---
 
@@ -253,65 +251,46 @@ void_reverses_stock_and_money()         // saldo balik, nota tetap ada
 expected_cash_excludes_qris()
 counted_zero_is_not_autofill()
 sale_number_is_unique_under_two_cashiers()
-migrate_from_empty_db()                 // sudah ada di tests/lifecycle.rs
+migrate_from_empty_db()                 // sudah ada (tests/lifecycle.rs)
 ```
 
 Sebelum rilis: 1 nota cash + 1 nota QRIS + 1 add-on → tutup shift → **hitung uang fisik di laci**.
-Struk: tidak ada baris > `paper_cols` kolom.
+Struk: tidak ada baris > `paper_cols` kolom. Build & tes **hijau di Windows dan WSL** sebelum commit.
 
 ---
 
-## 13. Jebakan yang sudah dibayar mahal (dari sistem lama)
+## 13. Jebakan yang sudah dibayar mahal
 
-1. **Cetak "sukses" ≠ kertas keluar.** Printer di balik NAT; saat NAT belum dipasang, port 9100
-   tertutup dan auto-print mati **diam-diam** sejak 11 Okt — tanpa error di UI, tanpa jejak di log.
-2. **Satu sumber pengaturan printer.** Semua jalur cetak membaca `printer_config()` yang sama.
+1. **Cetak "sukses" ≠ kertas keluar.** Di tenant pertama, printer di balik NAT: saat NAT belum
+   dipasang, port 9100 tertutup dan auto-print mati **diam-diam** 1,5 bulan tanpa error di UI.
+2. **Satu sumber pengaturan printer** untuk semua jalur cetak.
 3. **PWA/service worker = blank screen.** Jangan ditambahkan.
 4. **Build sukses ≠ tampilan benar.** Block HTML salah kedalaman tetap compile — cek visual.
-5. **Resep menunjuk bahan tidak ada = stok tidak pernah potong, HPP Rp 0.** Impor harus gagal keras.
-6. **Kolom yang dikira ada ternyata tidak ada** (`selling_or_buying` di ERPNext v15): error tiap
-   hari selama 2 bulan tanpa ada yang lihat. Di sini skema milik kita sendiri + tes migrasi dari DB
-   kosong.
-7. **Jangan mencampur `opening` dan `expected`** di laporan — kasir membaca dua angka itu sebagai
-   angka yang sama dan salah mengetik.
+5. **Resep menunjuk bahan tidak ada = stok tidak pernah potong, HPP 0.** Impor gagal keras (D7).
+6. **Kolom yang dikira ada ternyata tidak** → error harian selama 2 bulan tanpa ada yang lihat. Di
+   sini skema milik sendiri + tes migrasi dari DB kosong.
+7. **Jangan mencampur `opening` dan `expected`** di laporan.
 8. **Harga 0 harus bertanya**, bukan menjual gratis.
+9. **Jangan simpan saldo stok.** Warisan Bin negatif adalah hasil menyimpan saldo yang tidak pernah
+   direkonsiliasi.
 
 ---
 
-## 14. Keputusan
+## 14. Deployment & ops
 
-**Sudah dikunci:** satu outlet · SQLite lokal · HTMX tanpa npm · printer lewat NAT `192.168.1.254:9100`
-· QRIS statis · tanpa kas keluar · akuntansi/GL, wallet/loyalty, promo/offer/coupon, credit, partial
-payment, meja/KDS, batch/serial, bundle = tidak dibangun · tidak ada item yang di-disable · menu tidak
-dilacak sebagai stok (menu item ERPNext tidak diikuti) · riwayat nota lama tidak diimpor per baris
-(cukup agregat bulanan di `legacy_totals`).
-
-**Terbuka — tanya owner, jangan menebak:**
-
-1. Voucher hotspot MikroTik: diport ke sini di v1, atau tetap di ERPNext?
-2. Master data: cukup impor CSV/CLI di v1, atau sekalian halaman "Menu & Harga"?
-3. Tablet kedua / dua kasir bersamaan?
-4. Stok negatif: blokir penjualan atau izinkan + tandai?
-5. Waste Log (bahan terbuang) dipakai atau tidak?
-6. Lebar kertas printer: 58 mm (32 kolom) atau 80 mm (48 kolom)?
+- Produksi = Linux di PC toko; layanan `systemd`, `WorkingDirectory` menunjuk folder data, DB satu
+  file, backup harian `sqlite3 .backup` + rotasi 30 hari.
+- Tablet kasir buka `http://<ip-pc>:<port>` di WiFi yang sama; server lokal ⇒ tidak butuh PWA/offline.
+- Verifikasi Linux-native lewat WSL (§4) sebelum menandai langkah selesai.
+- Onboard toko baru = `migrate` + `import <fixture>` + isi settings (printer, QRIS, PIN) + test cetak.
 
 ---
 
-## 15. Migrasi & masa paralel
+## 15. Git & cara kerja
 
-1. Opname awal 44 bahan (tanggal cutover dicatat di `ref`).
-2. Jalankan RustPOS sebagai kasir, **ERPNext tetap hidup** sebagai pembanding laporan.
-3. Bandingkan per shift: jumlah nota, omzet, penjualan cash, penjualan QRIS. Cocok = lanjut;
-   tidak cocok = perbaiki dulu, jangan disable ERPNext.
-4. Setelah 1 minggu cocok: `systemctl disable` bench. **DB ERPNext jangan dihapus** (arsip pajak/riwayat).
-5. Backup harian: `sqlite3 .backup` + rotasi 30 hari (lihat `ops/`).
-
----
-
-## 16. Git & cara kerja
-
-- Branch per fitur: `feat/kasir-grid`, `fix/struk-58mm` → merge ke `main`. Jangan commit di `main`.
-- Pesan commit Inggris, awalan `feat|fix|docs|chore`, jelaskan **kenapa**.
-- `cargo fmt && cargo clippy --all-targets -- -D warnings` sebelum commit. Jangan commit `*.db`.
-- Satu sesi kerja = satu laporan singkat: apa yang jalan, apa yang belum, angka verifikasi.
-  Tanpa narasi proses.
+- Branch per fitur (`feat/till-grid`, `fix/receipt-58mm`) → merge `main`. Jangan commit di `main`.
+- Commit Inggris, awalan `feat|fix|docs|chore`, jelaskan **kenapa**.
+- `cargo fmt && cargo clippy --all-targets -- -D warnings` + tes hijau sebelum commit. Jangan commit
+  `*.db`.
+- Satu sesi kerja = satu laporan singkat: apa yang jalan, apa yang belum, angka verifikasi. Tanpa
+  narasi proses.
