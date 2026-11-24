@@ -168,7 +168,7 @@ async fn fast_taps_do_not_lose_items() {
 
     let (_, cart, _) = get(&app, "/cart", Some(&cookie)).await;
     assert!(
-        cart.contains("Keranjang · 5 item"),
+        cart.contains("Keranjang · 5 pcs"),
         "every tap must land in the cart: {cart}"
     );
 }
@@ -229,7 +229,7 @@ async fn a_full_till_run_from_login_to_receipt() {
 
     let (status, body, _) = get(&app, "/cart", cookie).await;
     assert_eq!(status, StatusCode::OK);
-    assert!(body.contains("Keranjang · 2 item"), "cart partial: {body}");
+    assert!(body.contains("Keranjang · 2 pcs"), "cart partial: {body}");
     assert!(body.contains("Rp 36.000"), "2 x 18.000 in the cart: {body}");
 
     // 5. pay cash and land on the receipt

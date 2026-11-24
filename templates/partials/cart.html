@@ -1,7 +1,7 @@
 <div class="cart-panel" id="cart">
   <div class="cart-head">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:17px"><path d="M6 8h12l1 12H5z"/><path d="M9 8a3 3 0 0 1 6 0"/></svg>
-    <span>Keranjang · {{ cart.total_qty }} item</span>
+    <span>Keranjang · {{ cart.total_qty }} pcs</span>
     <div class="spacer"></div>
     {% if !cart.empty %}
     <button class="btn btn-x" hx-post="/cart/clear" hx-swap="none">Kosongkan</button>
@@ -23,13 +23,13 @@
       <span class="name">
         {{ line.name }}
         {% if line.out_of_stock %}<span class="chip-warn">bahan habis</span>{% endif %}
+        {% if line.qty > 1 %}<span class="unit">{{ line.unit_price_display }} / item</span>{% endif %}
       </span>
       <span class="amount tnum">{{ line.amount_display }}</span>
       <span class="stepper">
         <button class="step-btn" hx-post="/cart/qty" hx-vals='{"item_id": {{ line.item_id }}, "qty": {{ line.qty - 1 }}}' hx-swap="none">−</button>
         <span class="qty-box tnum">{{ line.qty }}</span>
         <button class="step-btn" hx-post="/cart/qty" hx-vals='{"item_id": {{ line.item_id }}, "qty": {{ line.qty + 1 }}}' hx-swap="none">+</button>
-        {% if line.qty > 1 %}<span class="unit">{{ line.unit_price_display }} / item</span>{% endif %}
         <button class="step-btn del" hx-post="/cart/remove" hx-vals='{"item_id": {{ line.item_id }}}' hx-swap="none">✕</button>
       </span>
     </li>
