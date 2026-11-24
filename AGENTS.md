@@ -1,4 +1,4 @@
-# AGENTS.md — RustPOS
+# AGENTS.md — Kiosbin
 
 > **Cara pakai:** baca sampai habis sebelum menulis kode. Aturan §6 (uang), §7 (stok), §9 (UX
 > kasir) tidak boleh dilanggar tanpa alasan tertulis di commit message.
@@ -6,7 +6,7 @@
 > UI kasir & struk = Indonesia (pasar pertama), string dipisah supaya bisa diterjemahkan.
 > `docs/DECISIONS.md` = keputusan yang sudah dikunci; jangan didebat ulang tanpa alasan baru.
 
-RustPOS adalah **produk**: POS self-hosted untuk warung/kafe/retail kecil, satu binary, satu file
+Kiosbin adalah **produk**: POS self-hosted untuk warung/kafe/retail kecil, satu binary, satu file
 SQLite, tanpa cloud. Warkop 3Dara adalah **tenant uji pertama** (fixture + data referensi), bukan
 bagian dari kode. Jangan pernah menaruh nama toko, harga, IP printer, atau mata uang di dalam kode —
 semua itu datang dari fixture (§5).
@@ -60,7 +60,7 @@ alasan di commit message — ini produk yang harus gampang di-audit saat dijual.
 ## 2. Layout
 
 ```
-RustPOS/
+Kiosbin/
 ├── AGENTS.md · README.md · docs/ (DECISIONS.md, PRODUCT.md, tenants/)
 ├── Cargo.toml · migrations/ · fixtures/*.seed.json
 ├── src/  main.rs (CLI) · db.rs (pool, migrate, clock) · money.rs · import.rs
@@ -68,7 +68,7 @@ RustPOS/
 └── ops/  (belum) systemd unit, backup.sh
 ```
 
-`rustpos.db` (+ `-wal`/`-shm`) tidak pernah di-commit. Migrasi yang sudah dipakai di produksi tidak
+`kiosbin.db` (+ `-wal`/`-shm`) tidak pernah di-commit. Migrasi yang sudah dipakai di produksi tidak
 diedit — tambah file baru.
 
 ---
@@ -103,21 +103,21 @@ WSL Ubuntu 24.04 — untuk verifikasi Linux-native (target produksi). Target dir
 bukan di `/mnt/c`, supaya kompilasi tidak lambat:
 
 ```bash
-wslrun 'export PATH="$HOME/.cargo/bin:$PATH"; cd /mnt/c/Users/mansu/dev/RustPOS; \
-        CARGO_TARGET_DIR=$HOME/.cache/rustpos-target cargo test'
+wslrun 'export PATH="$HOME/.cargo/bin:$PATH"; cd /mnt/c/Users/mansu/dev/Kiosbin; \
+        CARGO_TARGET_DIR=$HOME/.cache/kiosbin-target cargo test'
 ```
 
 Output yang diharapkan:
 
 ```text
-migrate: ok  db=rustpos.db  migrations=migrations
+migrate: ok  db=kiosbin.db  migrations=migrations
 import: ok  items written=83 kept=0  recipe lines=70  uom conversions added=4  settings added=14
 import: ok  items written=0 kept=83  recipe lines=0  uom conversions added=0  settings added=0
 outlet = Warkop 3Dara   currency = IDR Rp   invoice prefix = W3D   paper = 48 cols
 items[addon] = 6 · items[menu] = 32 · items[raw] = 44 · items[service] = 1 · recipes = 70
 ```
 
-`--db PATH` atau env `RUSTPOS_DB` untuk database lain (dipakai tes).
+`--db PATH` atau env `KIOSBIN_DB` untuk database lain (dipakai tes).
 
 ---
 
@@ -220,7 +220,7 @@ tenant pertama untuk kebutuhan tenant lain — buat file baru.
 
 - Target dari `settings.printer_host` / `printer_port`. Contoh tenant pertama:
   `192.168.1.254:9100` (IP router dengan NAT ke printer — disengaja karena colokan modem habis).
-  Di RustPOS ini TCP biasa; POS tidak perlu tahu ada NAT.
+  Di Kiosbin ini TCP biasa; POS tidak perlu tahu ada NAT.
 - Lebar kertas dari `settings.paper_cols` (48 = 80 mm, 32 = 58 mm). Jangan hard-code di luar modul
   `print/`. Mana yang terpasang = O2.
 - Tes Printer **wajib** ada dan hasilnya ditampilkan (OK / timeout / refused). Timeout = masalah

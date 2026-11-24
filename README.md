@@ -1,4 +1,4 @@
-# RustPOS
+# Kiosbin
 
 A self-hosted point of sale for small shops, cafés and warungs — **one binary, one SQLite
 file, no cloud and no npm**. It does the two jobs a small outlet actually needs: take
@@ -32,7 +32,7 @@ If a native/mobile client is ever needed, the HTTP boundary is already the seam 
 ```bash
 export PATH="$HOME/.cargo/bin:$PATH"
 
-cargo run -- migrate                                  # create/upgrade rustpos.db
+cargo run -- migrate                                  # create/upgrade kiosbin.db
 cargo run -- import fixtures/warkop3dara.seed.json     # load an outlet fixture
 cargo run -- check                                    # counts, items without a price, negative stock
 cargo test                                            # 13 tests
@@ -45,7 +45,7 @@ import: ok  items written=83 kept=0  recipe lines=70  uom conversions added=4  s
 import: ok  items written=0 kept=83  recipe lines=0  uom conversions added=0  settings added=0   # re-import: nothing duplicated
 ```
 
-`--db PATH` (or `RUSTPOS_DB`) points at another database file. `import --force` re-reads the
+`--db PATH` (or `KIOSBIN_DB`) points at another database file. `import --force` re-reads the
 catalog from the fixture when the source changed; a plain import never overwrites rows an
 outlet has edited.
 

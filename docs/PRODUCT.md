@@ -21,7 +21,7 @@ atau bisnis yang butuh cloud multi-cabang. Ke arah itu (Postgres, server terpusa
 
 ## Kenapa mereka beli (vs ERPNext/pencatat manual)
 
-| Pembanding | Kenapa RustPOS menang |
+| Pembanding | Kenapa Kiosbin menang |
 |---|---|
 | ERPNext/POSNext self-hosted | Satu binary vs bench Python+Node+MariaDB. Backup = copy 1 file. Tidak butuh admin sistem. |
 | POS SaaS langganan | Tanpa biaya bulanan, tanpa kirim data penjualan ke pihak lain, tetap jalan kalau internet mati. |

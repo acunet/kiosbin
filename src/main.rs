@@ -1,16 +1,16 @@
-//! RustPOS command line entry point.
+//! Kiosbin command line entry point.
 //!
-//!   rustpos migrate [--db PATH] [--migrations DIR]
-//!   rustpos import <fixture.json> [--force] [--db PATH]
-//!   rustpos check [--db PATH]
+//!   kiosbin migrate [--db PATH] [--migrations DIR]
+//!   kiosbin import <fixture.json> [--force] [--db PATH]
+//!   kiosbin check [--db PATH]
 //!
-//! The web server (`rustpos serve`) lands in the next step: it is served by this same
+//! The web server (`kiosbin serve`) lands in the next step: it is served by this same
 //! binary, which is the point — one artifact to install on the shop's PC.
 
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use rustpos::{db, import};
+use kiosbin::{db, import};
 
 fn flag(args: &[String], name: &str) -> Option<String> {
     args.iter()
@@ -25,14 +25,14 @@ fn has(args: &[String], name: &str) -> bool {
 
 fn db_path(args: &[String]) -> PathBuf {
     flag(args, "--db")
-        .or_else(|| std::env::var("RUSTPOS_DB").ok())
-        .unwrap_or_else(|| "rustpos.db".to_string())
+        .or_else(|| std::env::var("KIOSBIN_DB").ok())
+        .unwrap_or_else(|| "kiosbin.db".to_string())
         .into()
 }
 
 fn usage() {
     eprintln!(
-        "rustpos <command>\n\
+        "kiosbin <command>\n\
          \n\
          commands:\n\
          \x20 migrate [--db PATH] [--migrations DIR]    create/upgrade the SQLite database\n\
@@ -71,7 +71,7 @@ async fn main() -> ExitCode {
             }
         }
         "import" => match args.get(1) {
-            None => Err("import needs a fixture file, e.g. `rustpos import fixtures/shop.seed.json`".into()),
+            None => Err("import needs a fixture file, e.g. `kiosbin import fixtures/shop.seed.json`".into()),
             Some(file) => match db::open(&path).await {
                 Ok(pool) => match import::import_catalog(&pool, &PathBuf::from(file), has(&args, "--force")).await {
                     Ok(r) => {

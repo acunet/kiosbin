@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use rustpos::{db, import};
+use kiosbin::{db, import};
 
 struct TempDb {
     dir: PathBuf,
@@ -12,10 +12,10 @@ struct TempDb {
 
 impl TempDb {
     fn new(tag: &str) -> Self {
-        let dir = std::env::temp_dir().join(format!("rustpos-test-{tag}-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("kiosbin-test-{tag}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("temp dir");
-        let path = dir.join("rustpos.db");
+        let path = dir.join("kiosbin.db");
         TempDb { dir, path }
     }
 

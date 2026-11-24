@@ -1,8 +1,8 @@
 [package]
-name = "rustpos"
+name = "kiosbin"
 version = "0.1.0"
 edition = "2021"
-description = "RustPOS — self-hosted point of sale with a raw-material stock ledger, in one binary"
+description = "Kiosbin — self-hosted point of sale with a raw-material stock ledger, in one binary"
 publish = false
 
 [dependencies]

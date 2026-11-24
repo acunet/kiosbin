@@ -1,4 +1,4 @@
--- 0001_init.sql — RustPOS initial schema.
+-- 0001_init.sql — Kiosbin initial schema.
 --
 -- Product rules the schema itself enforces:
 --   * money is an INTEGER in the currency's minor unit (rupiah: 1 = Rp 1) — never REAL

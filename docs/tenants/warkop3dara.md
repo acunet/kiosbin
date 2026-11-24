@@ -1,18 +1,18 @@
-# ASSESSMENT — RustPOS (mengganti ERPNext untuk POS + stock)
+# ASSESSMENT — Kiosbin (mengganti ERPNext untuk POS + stock)
 
 > **Status dokumen (2026-11-24):** ini assessment yang jadi asal-usul produk, ditulis saat
-> RustPOS masih direncanakan khusus untuk Warkop 3Dara. RustPOS sekarang **produk general**
+> Kiosbin masih direncanakan khusus untuk Warkop 3Dara. Kiosbin sekarang **produk general**
 > (lihat `README.md`, `docs/PRODUCT.md`, `docs/DECISIONS.md`); Warkop 3Dara adalah tenant uji
 > pertama lewat `fixtures/warkop3dara.seed.json`.
 >
 > Nama di bawah ini sudah berubah setelah generalisasi — baca dengan pemetaan ini:
-> `warkop-pos` → `rustpos` · `cargo run -- seed` → `cargo run -- import <fixture>` ·
-> `AGENTS.warkop-pos.md`/`docs/rust-pos/` di repo lama → `AGENTS.md` di repo RustPOS ·
-> repo baru `RustPOS` = `C:\Users\mansu\dev\RustPOS` (repo git sendiri).
+> `warkop-pos` → `kiosbin` · `cargo run -- seed` → `cargo run -- import <fixture>` ·
+> `AGENTS.warkop-pos.md`/`docs/rust-pos/` di repo lama → `AGENTS.md` di repo Kiosbin ·
+> repo baru `Kiosbin` = `C:\Users\mansu\dev\Kiosbin` (repo git sendiri).
 > Isi teknis, jebakan, dan urutan langkah di bawah masih berlaku, kecuali yang sudah diputuskan
 > ulang di `docs/DECISIONS.md`.
 
-> **Tanggal asli:** 2026-11-24 · **Target:** repo `RustPOS`
+> **Tanggal asli:** 2026-11-24 · **Target:** repo `Kiosbin`
 > **Yang dinilai:** `docs/rust-pos/AGENTS.warkop-pos.md` + `docs/rust-pos/warkop_seed.json`,
 > dibandingkan ulang dengan kode hidup di `pos_next/`, `warkop3dara_app/`, dan catatan prod
 > (`docs/CHANGELOG.md`, `docs/DEVELOPMENT_STATUS.md`).
@@ -72,7 +72,7 @@ masih berstatus desain: belum ada akses production yang diberikan). Angka di dok
 
 Ditelusuri dari kode: yang dipakai POS dari sisi stok cuma ini, dan semuanya gampang diganti.
 
-| Kebutuhan hari ini | Dipakai di | Rencana RustPOS |
+| Kebutuhan hari ini | Dipakai di | Rencana Kiosbin |
 |---|---|---|
 | `Bin.actual_qty` per warehouse (tampilkan stok di grid/dialog) | `items.py:45-54`, `:279-280`, `:431-439` | ✅ ledger turunan (SUM) — jangan simpan saldo |
 | Warehouse tunggal `Stores - W3D` | `AGENTS.warkop-pos.md` §12 | ✅ jadi konstanta `settings.outlet_warehouse` |
@@ -157,7 +157,7 @@ dicari di ERPNext selama masa paralel, (c) tabel `legacy_totals` (draft §8) unt
 
 Hari ini layout struk ada **dua kali**: ESC/POS byte builder (`pos_next/api/printer.py` 630 LOC +
 `warkop3dara_app/print_format/escpos.py` 317 LOC) dan Jinja print format (`pos_next_receipt.json`).
-Keduanya sudah pernah beda isi (blok Expected/Diff dihapus di salah satu jalur saja). Di RustPOS:
+Keduanya sudah pernah beda isi (blok Expected/Diff dihapus di salah satu jalur saja). Di Kiosbin:
 **satu fungsi render** yang bisa mengeluarkan byte ESC/POS dan HTML (reprint/layar) dari data yang
 sama. Ini menghapus kelas bug yang sudah dibayar mahal (`AGENTS.warkop-pos.md` §11.3).
 
@@ -249,7 +249,7 @@ sebelum jualan, voucher & master data sebelum paralel.
 
 ## 10. Keputusan yang harus dijawab owner (gua tidak menebak)
 
-1. **Voucher hotspot MikroTik:** di-port ke RustPOS di v1, atau tetap di ERPNext (ERPNext tidak boleh
+1. **Voucher hotspot MikroTik:** di-port ke Kiosbin di v1, atau tetap di ERPNext (ERPNext tidak boleh
    dimatikan total) sementara?
 2. **Master data:** cukup CLI/CSV import di v1, atau sekalian halaman owner "Menu & Harga"?
 3. **Stok menu item:** ikut dilacak (seperti sekarang) atau bahan saja?
@@ -257,16 +257,16 @@ sebelum jualan, voucher & master data sebelum paralel.
 5. **Waste Log (catatan bahan terbuang):** dipakai atau tidak?
 6. **Lebar kertas printer:** 58 mm (32 kolom) atau 80 mm (48 kolom)? (printer belum bisa dijangkau
    sejak 11 Okt, jadi ini sekalian diverifikasi saat langkah 7)
-7. **Lokasi repo `RustPOS`:** `C:\Users\mansu\dev\RustPOS` (repo git baru, sejajar
+7. **Lokasi repo `Kiosbin`:** `C:\Users\mansu\dev\Kiosbin` (repo git baru, sejajar
    `warkop3dara.id`) atau di dalam repo ini?
 8. **Tablet kedua / kasir kedua bersamaan** dan **WiFi mati = POS mati** (draft §12b, masih terbuka).
 
 ---
 
-## 11. Rencana isi folder `RustPOS`
+## 11. Rencana isi folder `Kiosbin`
 
 ```
-RustPOS/
+Kiosbin/
 ├── AGENTS.md                 # dari docs/rust-pos/AGENTS.warkop-pos.md (revisi sesuai §7 dok ini)
 ├── Cargo.toml · migrations/ · seed/warkop_seed.json
 ├── src/
@@ -281,9 +281,9 @@ RustPOS/
 ```
 
 Dokumen ini **tidak** menggantikan `AGENTS.warkop-pos.md` — ia daftar perubahan yang harus masuk ke
-sana sebelum repo `RustPOS` dibuat. Setelah owner menjawab §10, langkah berikutnya: patch
-`AGENTS.warkop-pos.md` (12 temuan §7) lalu scaffolding `RustPOS` langkah 1.
+sana sebelum repo `Kiosbin` dibuat. Setelah owner menjawab §10, langkah berikutnya: patch
+`AGENTS.warkop-pos.md` (12 temuan §7) lalu scaffolding `Kiosbin` langkah 1.
 
-**Assessment dianggap selesai bila:** (a) §10 terjawab, (b) AGENTS.md RustPOS sudah memuat
+**Assessment dianggap selesai bila:** (a) §10 terjawab, (b) AGENTS.md Kiosbin sudah memuat
 master-data, opening stock, kebijakan stok negatif, dan keputusan voucher, (c) skema `0001_init.sql`
 memuat tabel `uom_conversions` + kolom hotspot + `legacy_ref`.

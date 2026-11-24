@@ -1,4 +1,4 @@
-# DECISIONS — RustPOS
+# DECISIONS — Kiosbin
 
 Recorded so they do not get relitigated. Each is reversible, but only on purpose.
 
@@ -23,4 +23,4 @@ Recorded so they do not get relitigated. Each is reversible, but only on purpose
 | O3 | Voucher provider support in v1 (which provider, credentials handling) or leave `vouchers` empty for now? | Voucher step |
 | O4 | Negative stock: block the sale, or allow and flag it? | Till payment step |
 | O5 | Master-data editing: CSV/CLI import only, or an owner web page for menu and prices? | Before any real deployment |
-| O6 | Update channel for sold copies: manual binary copy, or a signed release/`rustpos upgrade`? | Before selling |
+| O6 | Update channel for sold copies: manual binary copy, or a signed release/`kiosbin upgrade`? | Before selling |

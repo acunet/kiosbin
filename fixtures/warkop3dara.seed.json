@@ -1,7 +1,7 @@
 {
   "tenant": "warkop3dara",
   "source": "erp.warkop3dara.id (Frappe/ERPNext) — dibaca read-only 2026-11-21",
-  "note": "Reference tenant used as the RustPOS test entity. Live catalogue snapshot, read-only from the ERPNext site on 2026-11-21. Prices = Standard Selling IDR. No item is disabled; MN-KOPI-07 is intentionally price 0.",
+  "note": "Reference tenant used as the Kiosbin test entity. Live catalogue snapshot, read-only from the ERPNext site on 2026-11-21. Prices = Standard Selling IDR. No item is disabled; MN-KOPI-07 is intentionally price 0.",
   "outlet": {
     "name": "Warkop 3Dara",
     "currency": "IDR",
